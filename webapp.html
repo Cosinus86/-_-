@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Всплывающее окно</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: transparent;
+            font-family: Arial, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            z-index: 999;
+        }
+        #popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            height: 70%;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            z-index: 1000;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        #header {
+            padding: 15px;
+            background: #007aff;
+            color: white;
+            font-weight: bold;
+            position: relative;
+            flex-shrink: 0;
+        }
+        #close-btn {
+            position: absolute;
+            top: 10px;
+            left: 15px;
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1001;
+        }
+        #content {
+            padding: 20px;
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+        .draggable {
+            position: absolute;
+            padding: 10px;
+            background: #f0f0f0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            cursor: move;
+            user-select: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="overlay"></div>
+    <div id="popup">
+        <div id="header">
+            <button id="close-btn">✕</button>
+            <div style="text-align: center;">Мое окно</div>
+        </div>
+        <div id="content">
+            <!-- Свободно размещаемые элементы -->
+            <div class="draggable" style="top: 50px; left: 30px;">Элемент 1</div>
+            <div class="draggable" style="top: 100px; left: 150px;">Элемент 2</div>
+            <div class="draggable" style="top: 200px; left: 80px;">Элемент 3</div>
+            <p>Контент с прокруткой...</p>
+            <!-- Добавьте больше контента для скролла -->
+            <div style="height: 1000px;">
+                Длинный контент...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Инициализация окна
+        document.addEventListener('DOMContentLoaded', function() {
+            const popup = document.getElementById('popup');
+            const closeBtn = document.getElementById('close-btn');
+            const overlay = document.getElementById('overlay');
+            const draggables = document.querySelectorAll('.draggable');
+
+            // Открыть окно сразу при загрузке Web App
+            overlay.style.display = 'block';
+            popup.style.display = 'block';
+
+            // Закрытие окна
+            closeBtn.addEventListener('click', function() {
+                Telegram.WebApp.close();
+            });
+
+            // Драгирование элементов
+            draggables.forEach(draggable => {
+                draggable.addEventListener('mousedown', function(e) {
+                    let shiftX = e.clientX - draggable.getBoundingClientRect().left;
+                    let shiftY = e.clientY - draggable.getBoundingClientRect().top;
+
+                    function moveAt(pageX, pageY) {
+                        draggable.style.left = pageX - shiftX + 'px';
+                        draggable.style.top = pageY - shiftY + 'px';
+                    }
+
+                    function onMouseMove(event) {
+                        moveAt(event.pageX, event.pageY);
+                    }
+
+                    document.addEventListener('mousemove', onMouseMove);
+
+                    draggable.onmouseup = function() {
+                        document.removeEventListener('mousemove', onMouseMove);
+                        draggable.onmouseup = null;
+                    };
+                });
+
+                draggable.ondragstart = function() {
+                    return false;
+                };
+            });
+
+            // Изменение размера окна (пример)
+            let isResizing = false;
+            const resizeHandle = document.createElement('div');
+            resizeHandle.style.position = 'absolute';
+            resizeHandle.style.bottom = '0';
+            resizeHandle.style.right = '0';
+            resizeHandle.style.width = '20px';
+            resizeHandle.style.height = '20px';
+            resizeHandle.style.background = '#007aff';
+            resizeHandle.style.cursor = 'se-resize';
+            popup.appendChild(resizeHandle);
+
+            resizeHandle.addEventListener('mousedown', function(e) {
+                isResizing = true;
+                document.addEventListener('mousemove', resize);
+                document.addEventListener('mouseup', stopResize);
+            });
+
+            function resize(e) {
+                if (!isResizing) return;
+                popup.style.width = e.clientX - popup.getBoundingClientRect().left + 'px';
+                popup.style.height = e.clientY - popup.getBoundingClientRect().top + 'px';
+            }
+
+            function stopResize() {
+                isResizing = false;
+                document.removeEventListener('mousemove', resize);
+            }
+        });
+    </script>
+</body>
+</html>
