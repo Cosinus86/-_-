@@ -270,6 +270,579 @@
     <div id="app">
         <div id="header">
             <button id="close-btn">✕</button>
+            <div id="section-title">Медиа-библиотека</div>
+            <div style="width: 40px;"></div>
+        </div>
+        
+        <div id="media-grid">
+            <!-- Данные будут вставлены через JavaScript -->
+        </div>
+    </div>
+
+    <script>
+        // Telegram Web App инициализация
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.ready();
+        
+        // Получаем параметр раздела из URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const sectionId = urlParams.get('section') || '1';
+        
+        // Элементы DOM
+        const closeBtn = document.getElementById('close-btn');
+        const sectionTitle = document.getElementById('section-title');
+        const mediaGrid = document.getElementById('media-grid');
+        
+        // Хранилище реакций пользователя
+        const userReactions = new Map();
+        
+        // Закрытие Web App
+        closeBtn.addEventListener('click', () => {
+            tg.close();
+        });
+        
+        // Тестовые данные - БЕЗ ОЖИДАНИЯ ЗАГРУЗКИ
+        const testData = {
+            success: true,
+            section: {
+                id: sectionId,
+                name: sectionId === '1' ? '🎬 Фильмы' : sectionId === '2' ? '💬 Общение' : '📁 Раздел ' + sectionId,
+                description: 'Медиа материалы'
+            },
+            media: [
+                {
+                    id: 1,
+                    file_id: 'test1',
+                    type: 'video',
+                    title: 'Демонстрационное видео о возможностях платформы',
+                    order: 1,
+                    reactions: { likes: 15, eyes: 3, confused: 2, mindblown: 8 }
+                },
+                {
+                    id: 2,
+                    file_id: 'test2',
+                    type: 'video',
+                    title: 'Инструкция по использованию медиа-библиотеки',
+                    order: 2,
+                    reactions: { likes: 7, eyes: 1, confused: 0, mindblown: 2 }
+                },
+                {
+                    id: 3,
+                    file_id: 'test3',
+                    type: 'audio',
+                    title: 'Аудио запись обсуждения новых функций',
+                    order: 3,
+                    reactions: { likes: 12, eyes: 4, confused: 1, mindblown: 3 }
+                },
+                {
+                    id: 4,
+                    file_id: 'test4',
+                    type: 'video',
+                    title: 'Пример работы с реакциями и оценками контента',
+                    order: 4,
+                    reactions: { likes: 23, eyes: 5, confused: 3, mindblown: 12 }
+                },
+                {
+                    id: 5,
+                    file_id: 'test5',
+                    type: 'video',
+                    title: 'Как добавлять новые материалы через бота',
+                    order: 5,
+                    reactions: { likes: 9, eyes: 2, confused: 1, mindblown: 4 }
+                },
+                {
+                    id: 6,
+                    file_id: 'test6',
+                    type: 'audio',
+                    title: 'Подкаст о будущих обновлениях системы',
+                    order: 6,
+                    reactions: { likes: 18, eyes: 6, confused: 2, mindblown: 7 }
+                },
+                {
+                    id: 7,
+                    file_id: 'test7',
+                    type: 'video',
+                    title: 'Видео-отзывы пользователей о работе платформы',
+                    order: 7,
+                    reactions: { likes: 14, eyes: 2, confused: 0, mindblown: 5 }
+                },
+                {
+                    id: 8,
+                    file_id: 'test8',
+                    type: 'audio',
+                    title: 'Музыка для фонового прослушивания во время работы',
+                    order: 8,
+                    reactions: { likes: 11, eyes: 1, confused: 1, mindblown: 2 }
+                }
+            ]
+        };
+        
+        // НЕМЕДЛЕННАЯ загрузка данных при старте
+        function initializeApp() {
+            console.log('Инициализация Web App, раздел:', sectionId);
+            
+            // Устанавливаем заголовок
+            sectionTitle.textContent = testData.section.name;
+            
+            // Отображаем данные
+            displaySectionData(testData);
+            
+            // Показываем уведомление
+            setTimeout(() => {
+                tg.showAlert('✅ Web App успешно загружен!\n\nДля реальных данных добавьте видео через бота в группе.');
+            }, 500);
+        }
+        
+        // Отображение данных раздела
+        function displaySectionData(data) {
+            // Очищаем сетку
+            mediaGrid.innerHTML = '';
+            
+            if (!data.media || data.media.length === 0) {
+                showEmptyState();
+                return;
+            }
+            
+            // Создаем карточки медиа
+            data.media.forEach(media => {
+                const card = createMediaCard(media);
+                mediaGrid.appendChild(card);
+            });
+        }
+        
+        // Создание карточки медиа
+        function createMediaCard(media) {
+            const card = document.createElement('div');
+            card.className = 'media-card';
+            
+            // Обрезаем название если оно слишком длинное
+            const shortTitle = media.title.length > 40 
+                ? media.title.substring(0, 37) + '...' 
+                : media.title;
+            
+            // Определяем иконку для типа медиа
+            const mediaIcon = media.type === 'video' ? 'fa-video' : 'fa-music';
+            const mediaClass = media.type === 'video' ? 'video' : 'audio';
+            
+            card.innerHTML = `
+                <div class="media-preview ${mediaClass}" data-media-id="${media.id}">
+                    <div class="order-badge">#${media.order}</div>
+                    <i class="fas ${mediaIcon}"></i>
+                </div>
+                <div class="media-info">
+                    <div class="media-title" title="${media.title}">${shortTitle}</div>
+                    <div class="reactions">
+                        <button class="reaction-btn likes" data-reaction="likes" data-media-id="${media.id}">
+                            <i class="fas fa-thumbs-up"></i>
+                            <span>Класс</span>
+                            <span class="reaction-count">${media.reactions.likes}</span>
+                        </button>
+                        <button class="reaction-btn eyes" data-reaction="eyes" data-media-id="${media.id}">
+                            <i class="fas fa-eye"></i>
+                            <span>Глаза</span>
+                            <span class="reaction-count">${media.reactions.eyes}</span>
+                        </button>
+                        <button class="reaction-btn confused" data-reaction="confused" data-media-id="${media.id}">
+                            <i class="fas fa-question-circle"></i>
+                            <span>Не понимаю</span>
+                            <span class="reaction-count">${media.reactions.confused}</span>
+                        </button>
+                        <button class="reaction-btn mindblown" data-reaction="mindblown" data-media-id="${media.id}">
+                            <i class="fas fa-brain"></i>
+                            <span>Взрыв мозга</span>
+                            <span class="reaction-count">${media.reactions.mindblown}</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            // Обработчик клика на превью
+            const preview = card.querySelector('.media-preview');
+            preview.addEventListener('click', () => {
+                playMedia(media);
+            });
+            
+            // Обработчики реакций
+            const reactionButtons = card.querySelectorAll('.reaction-btn');
+            reactionButtons.forEach(button => {
+                button.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    handleReaction(
+                        media.id,
+                        button.dataset.reaction,
+                        button
+                    );
+                });
+            });
+            
+            return card;
+        }
+        
+        // Воспроизведение медиа
+        function playMedia(media) {
+            const message = media.type === 'video' 
+                ? `🎬 Воспроизведение видео: "${media.title}"`
+                : `🎵 Воспроизведение аудио: "${media.title}"`;
+            
+            tg.showAlert(message + '\n\nВ реальном приложении здесь будет открыт медиа-файл.');
+        }
+        
+        // Обработка реакции
+        function handleReaction(mediaId, reactionType, button) {
+            const key = `${mediaId}_${reactionType}`;
+            
+            // Если реакция уже поставлена - снимаем
+            if (userReactions.has(key)) {
+                userReactions.delete(key);
+                button.classList.remove('active');
+                
+                // Уменьшаем счетчик
+                const countSpan = button.querySelector('.reaction-count');
+                countSpan.textContent = parseInt(countSpan.textContent) - 1;
+                
+            } else {
+                // Удаляем другие реакции этого пользователя для этого медиа
+                for (const [existingKey] of userReactions) {
+                    if (existingKey.startsWith(`${mediaId}_`)) {
+                        userReactions.delete(existingKey);
+                        
+                        // Снимаем активный класс с предыдущей кнопки
+                        const prevReaction = existingKey.split('_')[1];
+                        const prevButton = document.querySelector(
+                            `.reaction-btn[data-media-id="${mediaId}"][data-reaction="${prevReaction}"]`
+                        );
+                        if (prevButton) {
+                            prevButton.classList.remove('active');
+                            
+                            // Уменьшаем счетчик предыдущей реакции
+                            const prevCount = prevButton.querySelector('.reaction-count');
+                            prevCount.textContent = parseInt(prevCount.textContent) - 1;
+                        }
+                    }
+                }
+                
+                // Добавляем новую реакцию
+                userReactions.set(key, true);
+                button.classList.add('active');
+                
+                // Увеличиваем счетчик
+                const countSpan = button.querySelector('.reaction-count');
+                countSpan.textContent = parseInt(countSpan.textContent) + 1;
+                
+                // Показываем уведомление
+                const reactionNames = {
+                    'likes': '👍 Класс',
+                    'eyes': '👀 Глаза',
+                    'confused': '❓ Не понимаю',
+                    'mindblown': '💥 Взрыв мозга'
+                };
+                
+                tg.showAlert(`Вы поставили реакцию: ${reactionNames[reactionType]}\n\nРеакция сохранена локально.`);
+            }
+        }
+        
+        // Показать пустое состояние
+        function showEmptyState() {
+            mediaGrid.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-film"></i>
+                    <h3>Раздел пуст</h3>
+                    <p>В этом разделе пока нет медиа-материалов</p>
+                    <p>Добавьте видео или аудио через бота в группе:</p>
+                    <ol style="text-align: left; display: inline-block; margin-top: 10px;">
+                        <li>Отправьте /start в теме группы</li>
+                        <li>Отправьте видео/аудио файл</li>
+                        <li>Выберите раздел</li>
+                    </ol>
+                </div>
+            `;
+        }
+        
+        // Инициализация при загрузке - НЕМЕДЛЕННО
+        document.addEventListener('DOMContentLoaded', initializeApp);
+        
+        // Для отладки: кнопка перезагрузки в консоли
+        console.log('Web App загружен. Для перезагрузки данных выполните: window.reloadData()');
+        window.reloadData = function() {
+            initializeApp();
+            tg.showAlert('Данные перезагружены!');
+        };
+        
+        // Обработка свайпов
+        let touchStartX = 0;
+        let touchEndX = 0;
+        
+        document.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+        });
+        
+        document.addEventListener('touchend', e => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        });
+        
+        function handleSwipe() {
+            const swipeThreshold = 50;
+            const diff = touchStartX - touchEndX;
+            
+            if (Math.abs(diff) > swipeThreshold) {
+                if (diff > 0) {
+                    tg.showAlert('Следующий раздел - в разработке');
+                } else {
+                    tg.showAlert('Предыдущий раздел - в разработке');
+                }
+            }
+        }
+        
+        // Обработка сообщений от Telegram
+        if (tg.onEvent) {
+            tg.onEvent('viewportChanged', () => {
+                console.log('Размер окна изменен');
+            });
+            
+            tg.onEvent('closed', () => {
+                console.log('Web App закрыт пользователем');
+            });
+        }
+    </script>
+</body>
+</html>            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        
+        #close-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #section-title {
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            flex-grow: 1;
+        }
+        
+        #media-grid {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        
+        .media-card {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            border: 1px solid #eee;
+        }
+        
+        .media-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+        
+        .media-preview {
+            width: 100%;
+            height: 160px;
+            background: linear-gradient(45deg, #f093fb 0%, #f5576c 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 50px;
+            position: relative;
+            cursor: pointer;
+        }
+        
+        .media-preview.video::before {
+            content: "▶";
+            font-size: 40px;
+            background: rgba(0,0,0,0.7);
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .media-preview.audio::before {
+            content: "♪";
+            font-size: 40px;
+            background: rgba(0,0,0,0.7);
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .order-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .media-info {
+            padding: 15px;
+        }
+        
+        .media-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 16px;
+            color: #333;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .reactions {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+        
+        .reaction-btn {
+            background: #f8f9fa;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            flex: 1;
+            margin: 0 2px;
+            justify-content: center;
+        }
+        
+        .reaction-btn:hover {
+            background: #e9ecef;
+            transform: scale(1.05);
+        }
+        
+        .reaction-btn.active {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .reaction-btn.likes { color: #4CAF50; }
+        .reaction-btn.eyes { color: #FF9800; }
+        .reaction-btn.confused { color: #9C27B0; }
+        .reaction-btn.mindblown { color: #f44336; }
+        
+        .reaction-count {
+            font-weight: bold;
+            font-size: 12px;
+        }
+        
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #666;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error {
+            color: #f44336;
+            text-align: center;
+            padding: 40px;
+            font-size: 18px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 18px;
+        }
+        
+        .empty-state i {
+            font-size: 60px;
+            margin-bottom: 20px;
+            color: #ddd;
+        }
+        
+        /* Адаптивность */
+        @media (max-width: 768px) {
+            #app {
+                width: 100%;
+                height: 100%;
+                border-radius: 0;
+            }
+            
+            #media-grid {
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+                gap: 15px;
+            }
+            
+            .reaction-btn span {
+                display: none;
+            }
+            
+            .reaction-btn {
+                padding: 8px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            #media-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+            
+            .media-preview {
+                height: 120px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div id="header">
+            <button id="close-btn">✕</button>
             <div id="section-title">Загрузка...</div>
             <div style="width: 40px;"></div>
         </div>
