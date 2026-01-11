@@ -3,170 +3,628 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Всплывающее окно</title>
+    <title>Медиа-библиотека</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body {
             margin: 0;
             padding: 0;
-            background: transparent;
-            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             height: 100vh;
             overflow: hidden;
         }
-        #overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            display: none;
-            z-index: 999;
-        }
-        #popup {
+        
+        #app {
             position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 80%;
-            height: 70%;
+            width: 95%;
+            height: 90%;
             background: white;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            z-index: 1000;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             overflow: hidden;
             display: flex;
             flex-direction: column;
         }
+        
         #header {
-            padding: 15px;
-            background: #007aff;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
             color: white;
-            font-weight: bold;
-            position: relative;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             flex-shrink: 0;
         }
+        
         #close-btn {
-            position: absolute;
-            top: 10px;
-            left: 15px;
-            background: transparent;
+            background: rgba(255,255,255,0.2);
             border: none;
             color: white;
-            font-size: 24px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 20px;
             cursor: pointer;
-            z-index: 1001;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        #content {
-            padding: 20px;
+        
+        #section-title {
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
             flex-grow: 1;
-            overflow-y: auto;
         }
-        .draggable {
+        
+        #media-grid {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        
+        .media-card {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            border: 1px solid #eee;
+        }
+        
+        .media-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+        
+        .media-preview {
+            width: 100%;
+            height: 160px;
+            background: linear-gradient(45deg, #f093fb 0%, #f5576c 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 50px;
+            position: relative;
+            cursor: pointer;
+        }
+        
+        .media-preview.video::before {
+            content: "▶";
+            font-size: 40px;
+            background: rgba(0,0,0,0.7);
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .media-preview.audio::before {
+            content: "♪";
+            font-size: 40px;
+            background: rgba(0,0,0,0.7);
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .order-badge {
             position: absolute;
-            padding: 10px;
-            background: #f0f0f0;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            cursor: move;
-            user-select: none;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .media-info {
+            padding: 15px;
+        }
+        
+        .media-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 16px;
+            color: #333;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .reactions {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+        
+        .reaction-btn {
+            background: #f8f9fa;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            flex: 1;
+            margin: 0 2px;
+            justify-content: center;
+        }
+        
+        .reaction-btn:hover {
+            background: #e9ecef;
+            transform: scale(1.05);
+        }
+        
+        .reaction-btn.active {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .reaction-btn.likes { color: #4CAF50; }
+        .reaction-btn.eyes { color: #FF9800; }
+        .reaction-btn.confused { color: #9C27B0; }
+        .reaction-btn.mindblown { color: #f44336; }
+        
+        .reaction-count {
+            font-weight: bold;
+            font-size: 12px;
+        }
+        
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #666;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error {
+            color: #f44336;
+            text-align: center;
+            padding: 40px;
+            font-size: 18px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 18px;
+        }
+        
+        .empty-state i {
+            font-size: 60px;
+            margin-bottom: 20px;
+            color: #ddd;
+        }
+        
+        /* Адаптивность */
+        @media (max-width: 768px) {
+            #app {
+                width: 100%;
+                height: 100%;
+                border-radius: 0;
+            }
+            
+            #media-grid {
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+                gap: 15px;
+            }
+            
+            .reaction-btn span {
+                display: none;
+            }
+            
+            .reaction-btn {
+                padding: 8px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            #media-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+            
+            .media-preview {
+                height: 120px;
+            }
         }
     </style>
 </head>
 <body>
-    <div id="overlay"></div>
-    <div id="popup">
+    <div id="app">
         <div id="header">
             <button id="close-btn">✕</button>
-            <div style="text-align: center;">Мое окно</div>
+            <div id="section-title">Загрузка...</div>
+            <div style="width: 40px;"></div>
         </div>
-        <div id="content">
-            <!-- Свободно размещаемые элементы -->
-            <div class="draggable" style="top: 50px; left: 30px;">Элемент 1</div>
-            <div class="draggable" style="top: 100px; left: 150px;">Элемент 2</div>
-            <div class="draggable" style="top: 200px; left: 80px;">Элемент 3</div>
-            <p>Контент с прокруткой...</p>
-            <!-- Добавьте больше контента для скролла -->
-            <div style="height: 1000px;">
-                Длинный контент...
+        
+        <div id="media-grid">
+            <div class="loading">
+                <div class="loading-spinner"></div>
+                <p>Загрузка медиа-библиотеки...</p>
             </div>
         </div>
     </div>
 
     <script>
-        // Инициализация окна
-        document.addEventListener('DOMContentLoaded', function() {
-            const popup = document.getElementById('popup');
-            const closeBtn = document.getElementById('close-btn');
-            const overlay = document.getElementById('overlay');
-            const draggables = document.querySelectorAll('.draggable');
-
-            // Открыть окно сразу при загрузке Web App
-            overlay.style.display = 'block';
-            popup.style.display = 'block';
-
-            // Закрытие окна
-            closeBtn.addEventListener('click', function() {
-                Telegram.WebApp.close();
-            });
-
-            // Драгирование элементов
-            draggables.forEach(draggable => {
-                draggable.addEventListener('mousedown', function(e) {
-                    let shiftX = e.clientX - draggable.getBoundingClientRect().left;
-                    let shiftY = e.clientY - draggable.getBoundingClientRect().top;
-
-                    function moveAt(pageX, pageY) {
-                        draggable.style.left = pageX - shiftX + 'px';
-                        draggable.style.top = pageY - shiftY + 'px';
-                    }
-
-                    function onMouseMove(event) {
-                        moveAt(event.pageX, event.pageY);
-                    }
-
-                    document.addEventListener('mousemove', onMouseMove);
-
-                    draggable.onmouseup = function() {
-                        document.removeEventListener('mousemove', onMouseMove);
-                        draggable.onmouseup = null;
-                    };
-                });
-
-                draggable.ondragstart = function() {
-                    return false;
-                };
-            });
-
-            // Изменение размера окна (пример)
-            let isResizing = false;
-            const resizeHandle = document.createElement('div');
-            resizeHandle.style.position = 'absolute';
-            resizeHandle.style.bottom = '0';
-            resizeHandle.style.right = '0';
-            resizeHandle.style.width = '20px';
-            resizeHandle.style.height = '20px';
-            resizeHandle.style.background = '#007aff';
-            resizeHandle.style.cursor = 'se-resize';
-            popup.appendChild(resizeHandle);
-
-            resizeHandle.addEventListener('mousedown', function(e) {
-                isResizing = true;
-                document.addEventListener('mousemove', resize);
-                document.addEventListener('mouseup', stopResize);
-            });
-
-            function resize(e) {
-                if (!isResizing) return;
-                popup.style.width = e.clientX - popup.getBoundingClientRect().left + 'px';
-                popup.style.height = e.clientY - popup.getBoundingClientRect().top + 'px';
+        // Telegram Web App инициализация
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.ready();
+        
+        // Получаем параметр раздела из URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const sectionId = urlParams.get('section');
+        
+        // Элементы DOM
+        const closeBtn = document.getElementById('close-btn');
+        const sectionTitle = document.getElementById('section-title');
+        const mediaGrid = document.getElementById('media-grid');
+        
+        // Хранилище реакций пользователя
+        const userReactions = new Map();
+        
+        // Закрытие Web App
+        closeBtn.addEventListener('click', () => {
+            tg.close();
+        });
+        
+        // Загрузка медиа раздела
+        async function loadSectionMedia() {
+            if (!sectionId) {
+                showError('Не указан раздел');
+                return;
             }
-
-            function stopResize() {
-                isResizing = false;
-                document.removeEventListener('mousemove', resize);
+            
+            try {
+                // В реальности нужно делать запрос к вашему боту
+                // Здесь пример данных
+                const mockData = {
+                    success: true,
+                    section: {
+                        id: sectionId,
+                        name: sectionId === '1' ? 'Фильмы' : 'Общение',
+                        description: 'Медиа материалы'
+                    },
+                    media: [
+                        {
+                            id: 1,
+                            file_id: 'video1',
+                            type: 'video',
+                            title: 'Очень длинное название видео которое не помещается в одну строку и должно обрезаться',
+                            order: 1,
+                            reactions: { likes: 15, eyes: 3, confused: 2, mindblown: 8 }
+                        },
+                        {
+                            id: 2,
+                            file_id: 'video2',
+                            type: 'video',
+                            title: 'Короткое видео',
+                            order: 2,
+                            reactions: { likes: 7, eyes: 1, confused: 0, mindblown: 2 }
+                        },
+                        {
+                            id: 3,
+                            file_id: 'audio1',
+                            type: 'audio',
+                            title: 'Аудио запись обсуждения',
+                            order: 3,
+                            reactions: { likes: 12, eyes: 4, confused: 1, mindblown: 3 }
+                        },
+                        {
+                            id: 4,
+                            file_id: 'video3',
+                            type: 'video',
+                            title: 'Демонстрация работы',
+                            order: 4,
+                            reactions: { likes: 23, eyes: 5, confused: 3, mindblown: 12 }
+                        },
+                        {
+                            id: 5,
+                            file_id: 'video4',
+                            type: 'video',
+                            title: 'Инструкция по использованию',
+                            order: 5,
+                            reactions: { likes: 9, eyes: 2, confused: 1, mindblown: 4 }
+                        },
+                        {
+                            id: 6,
+                            file_id: 'audio2',
+                            type: 'audio',
+                            title: 'Музыкальный трек',
+                            order: 6,
+                            reactions: { likes: 18, eyes: 6, confused: 2, mindblown: 7 }
+                        }
+                    ]
+                };
+                
+                displaySectionData(mockData);
+                
+            } catch (error) {
+                console.error('Ошибка загрузки:', error);
+                showError('Ошибка загрузки данных');
+            }
+        }
+        
+        // Отображение данных раздела
+        function displaySectionData(data) {
+            if (!data.success || !data.media) {
+                showError('Нет данных для отображения');
+                return;
+            }
+            
+            // Устанавливаем заголовок
+            sectionTitle.textContent = data.section.name;
+            
+            // Очищаем сетку
+            mediaGrid.innerHTML = '';
+            
+            if (data.media.length === 0) {
+                showEmptyState();
+                return;
+            }
+            
+            // Создаем карточки медиа
+            data.media.forEach(media => {
+                const card = createMediaCard(media);
+                mediaGrid.appendChild(card);
+            });
+        }
+        
+        // Создание карточки медиа
+        function createMediaCard(media) {
+            const card = document.createElement('div');
+            card.className = 'media-card';
+            
+            // Обрезаем название если оно слишком длинное
+            const shortTitle = media.title.length > 50 
+                ? media.title.substring(0, 47) + '...' 
+                : media.title;
+            
+            // Определяем иконку для типа медиа
+            const mediaIcon = media.type === 'video' ? 'fa-video' : 'fa-music';
+            const mediaClass = media.type === 'video' ? 'video' : 'audio';
+            
+            card.innerHTML = `
+                <div class="media-preview ${mediaClass}" data-media-id="${media.id}">
+                    <div class="order-badge">#${media.order}</div>
+                    <i class="fas ${mediaIcon}"></i>
+                </div>
+                <div class="media-info">
+                    <div class="media-title" title="${media.title}">${shortTitle}</div>
+                    <div class="reactions">
+                        <button class="reaction-btn likes" data-reaction="likes" data-media-id="${media.id}">
+                            <i class="fas fa-thumbs-up"></i>
+                            <span>Класс</span>
+                            <span class="reaction-count">${media.reactions.likes}</span>
+                        </button>
+                        <button class="reaction-btn eyes" data-reaction="eyes" data-media-id="${media.id}">
+                            <i class="fas fa-eye"></i>
+                            <span>Глаза</span>
+                            <span class="reaction-count">${media.reactions.eyes}</span>
+                        </button>
+                        <button class="reaction-btn confused" data-reaction="confused" data-media-id="${media.id}">
+                            <i class="fas fa-question-circle"></i>
+                            <span>Не понимаю</span>
+                            <span class="reaction-count">${media.reactions.confused}</span>
+                        </button>
+                        <button class="reaction-btn mindblown" data-reaction="mindblown" data-media-id="${media.id}">
+                            <i class="fas fa-brain"></i>
+                            <span>Взрыв мозга</span>
+                            <span class="reaction-count">${media.reactions.mindblown}</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            // Обработчик клика на превью
+            const preview = card.querySelector('.media-preview');
+            preview.addEventListener('click', () => {
+                playMedia(media);
+            });
+            
+            // Обработчики реакций
+            const reactionButtons = card.querySelectorAll('.reaction-btn');
+            reactionButtons.forEach(button => {
+                button.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    handleReaction(
+                        media.id,
+                        button.dataset.reaction,
+                        button
+                    );
+                });
+            });
+            
+            return card;
+        }
+        
+        // Воспроизведение медиа
+        function playMedia(media) {
+            if (media.type === 'video') {
+                // Для видео можно открыть в плеере Telegram
+                tg.openLink(`https://t.me/${tg.initDataUnsafe.user?.username || 'video'}`);
+                // Или показать уведомление
+                tg.showAlert(`Воспроизведение видео: ${media.title}`);
+            } else {
+                // Для аудио
+                tg.showAlert(`Воспроизведение аудио: ${media.title}`);
+            }
+        }
+        
+        // Обработка реакции
+        async function handleReaction(mediaId, reactionType, button) {
+            const key = `${mediaId}_${reactionType}`;
+            
+            // Если реакция уже поставлена - снимаем
+            if (userReactions.has(key)) {
+                userReactions.delete(key);
+                button.classList.remove('active');
+                
+                // Уменьшаем счетчик
+                const countSpan = button.querySelector('.reaction-count');
+                countSpan.textContent = parseInt(countSpan.textContent) - 1;
+                
+            } else {
+                // Удаляем другие реакции этого пользователя для этого медиа
+                for (const [existingKey] of userReactions) {
+                    if (existingKey.startsWith(`${mediaId}_`)) {
+                        userReactions.delete(existingKey);
+                        
+                        // Снимаем активный класс с предыдущей кнопки
+                        const prevReaction = existingKey.split('_')[1];
+                        const prevButton = document.querySelector(
+                            `.reaction-btn[data-media-id="${mediaId}"][data-reaction="${prevReaction}"]`
+                        );
+                        if (prevButton) {
+                            prevButton.classList.remove('active');
+                            
+                            // Уменьшаем счетчик предыдущей реакции
+                            const prevCount = prevButton.querySelector('.reaction-count');
+                            prevCount.textContent = parseInt(prevCount.textContent) - 1;
+                        }
+                    }
+                }
+                
+                // Добавляем новую реакцию
+                userReactions.set(key, true);
+                button.classList.add('active');
+                
+                // Увеличиваем счетчик
+                const countSpan = button.querySelector('.reaction-count');
+                countSpan.textContent = parseInt(countSpan.textContent) + 1;
+                
+                // Отправляем на сервер
+                try {
+                    await sendReactionToServer(mediaId, reactionType);
+                } catch (error) {
+                    console.error('Ошибка отправки реакции:', error);
+                }
+            }
+        }
+        
+        // Отправка реакции на сервер
+        async function sendReactionToServer(mediaId, reactionType) {
+            // В реальности нужно отправлять запрос к боту
+            // Пример: fetch(`https://api.telegram.org/botTOKEN/react?media_id=${mediaId}&reaction=${reactionType}`)
+            
+            console.log(`Реакция отправлена: media=${mediaId}, reaction=${reactionType}`);
+            
+            // Имитация успешной отправки
+            return new Promise(resolve => setTimeout(resolve, 300));
+        }
+        
+        // Показать состояние ошибки
+        function showError(message) {
+            mediaGrid.innerHTML = `
+                <div class="error">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 48px; margin-bottom: 20px;"></i>
+                    <h3>Ошибка</h3>
+                    <p>${message}</p>
+                    <button onclick="location.reload()" style="
+                        margin-top: 20px;
+                        padding: 10px 20px;
+                        background: #3498db;
+                        color: white;
+                        border: none;
+                        border-radius: 5px;
+                        cursor: pointer;
+                    ">
+                        Попробовать снова
+                    </button>
+                </div>
+            `;
+        }
+        
+        // Показать пустое состояние
+        function showEmptyState() {
+            mediaGrid.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-film"></i>
+                    <h3>Раздел пуст</h3>
+                    <p>В этом разделе пока нет медиа-материалов</p>
+                </div>
+            `;
+        }
+        
+        // Инициализация при загрузке
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSectionMedia();
+            
+            // Отправка данных о запуске в Telegram
+            if (tg.initDataUnsafe.user) {
+                console.log('Пользователь:', tg.initDataUnsafe.user);
+                tg.sendData(JSON.stringify({
+                    action: 'webapp_opened',
+                    section_id: sectionId,
+                    user_id: tg.initDataUnsafe.user.id
+                }));
             }
         });
+        
+        // Обработка свайпов для навигации (если нужно будет добавить)
+        let touchStartX = 0;
+        let touchEndX = 0;
+        
+        document.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+        });
+        
+        document.addEventListener('touchend', e => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        });
+        
+        function handleSwipe() {
+            const swipeThreshold = 50;
+            const diff = touchStartX - touchEndX;
+            
+            if (Math.abs(diff) > swipeThreshold) {
+                if (diff > 0) {
+                    // Свайп влево - следующий раздел
+                    tg.showAlert('Следующий раздел (в разработке)');
+                } else {
+                    // Свайп вправо - предыдущий раздел
+                    tg.showAlert('Предыдущий раздел (в разработке)');
+                }
+            }
+        }
     </script>
 </body>
 </html>
