@@ -479,7 +479,7 @@
         function playMedia(media) {
             if (media.type === 'video') {
                 // Для видео можно открыть в плеере Telegram
-                tg.openLink(`https://t.me/${tg.initDataUnsafe.user?.username || 'video'}`);
+                tg.openLink(`https://t.me/`);
                 // Или показать уведомление
                 tg.showAlert(`Воспроизведение видео: ${media.title}`);
             } else {
@@ -588,17 +588,20 @@
             loadSectionMedia();
             
             // Отправка данных о запуске в Telegram
-            if (tg.initDataUnsafe.user) {
+            // Безопасная проверка наличия данных пользователя
+            if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
                 console.log('Пользователь:', tg.initDataUnsafe.user);
                 tg.sendData(JSON.stringify({
                     action: 'webapp_opened',
                     section_id: sectionId,
                     user_id: tg.initDataUnsafe.user.id
                 }));
+            } else {
+                console.log('Данные пользователя недоступны');
             }
         });
         
-        // Обработка свайпов для навигации (если нужно будет добавить)
+        // Обработка свайпов для навигации
         let touchStartX = 0;
         let touchEndX = 0;
         
