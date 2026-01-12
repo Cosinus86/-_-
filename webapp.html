@@ -1,1798 +1,506 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Медиа-библиотека</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body {
+        * {
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            height: 100vh;
-            overflow: hidden;
-        }
-        
-        #app {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 95%;
-            height: 90%;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        #header {
-            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
-            color: white;
+            min-height: 100vh;
             padding: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-shrink: 0;
         }
-        
-        #close-btn {
-            background: rgba(255,255,255,0.2);
-            border: none;
-            color: white;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            font-size: 20px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        #section-title {
-            font-size: 24px;
-            font-weight: bold;
-            text-align: center;
-            flex-grow: 1;
-        }
-        
-        #media-grid {
-            flex-grow: 1;
-            padding: 20px;
-            overflow-y: auto;
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 20px;
-        }
-        
-        .media-card {
-            background: white;
-            border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
-            border: 1px solid #eee;
-        }
-        
-        .media-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-        }
-        
-        .media-preview {
-            width: 100%;
-            height: 160px;
-            background: linear-gradient(45deg, #f093fb 0%, #f5576c 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 50px;
-            position: relative;
-            cursor: pointer;
-        }
-        
-        .media-preview.video::before {
-            content: "▶";
-            font-size: 40px;
-            background: rgba(0,0,0,0.7);
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .media-preview.audio::before {
-            content: "♪";
-            font-size: 40px;
-            background: rgba(0,0,0,0.7);
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .order-badge {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-        
-        .media-info {
-            padding: 15px;
-        }
-        
-        .media-title {
-            font-weight: bold;
-            margin-bottom: 10px;
-            font-size: 16px;
-            color: #333;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        
-        .reactions {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 10px;
-        }
-        
-        .reaction-btn {
-            background: #f8f9fa;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 10px;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            flex: 1;
-            margin: 0 2px;
-            justify-content: center;
-        }
-        
-        .reaction-btn:hover {
-            background: #e9ecef;
-            transform: scale(1.05);
-        }
-        
-        .reaction-btn.active {
-            background: #e3f2fd;
-            color: #1976d2;
-        }
-        
-        .reaction-btn.likes { color: #4CAF50; }
-        .reaction-btn.eyes { color: #FF9800; }
-        .reaction-btn.confused { color: #9C27B0; }
-        .reaction-btn.mindblown { color: #f44336; }
-        
-        .reaction-count {
-            font-weight: bold;
-            font-size: 12px;
-        }
-        
-        .loading {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            color: #666;
-        }
-        
-        .loading-spinner {
-            width: 50px;
-            height: 50px;
-            border: 5px solid #f3f3f3;
-            border-top: 5px solid #3498db;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 20px;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .error {
-            color: #f44336;
-            text-align: center;
-            padding: 40px;
-            font-size: 18px;
-        }
-        
-        .empty-state {
-            text-align: center;
-            padding: 40px;
-            color: #666;
-            font-size: 18px;
-        }
-        
-        .empty-state i {
-            font-size: 60px;
-            margin-bottom: 20px;
-            color: #ddd;
-        }
-        
-        /* Адаптивность */
-        @media (max-width: 768px) {
-            #app {
-                width: 100%;
-                height: 100%;
-                border-radius: 0;
-            }
-            
-            #media-grid {
-                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-                gap: 15px;
-            }
-            
-            .reaction-btn span {
-                display: none;
-            }
-            
-            .reaction-btn {
-                padding: 8px;
-            }
-        }
-        
-        @media (max-width: 480px) {
-            #media-grid {
-                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            }
-            
-            .media-preview {
-                height: 120px;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div id="app">
-        <div id="header">
-            <button id="close-btn">✕</button>
-            <div id="section-title">Медиа-библиотека</div>
-            <div style="width: 40px;"></div>
-        </div>
-        
-        <div id="media-grid">
-            <!-- Данные будут вставлены через JavaScript -->
-        </div>
-    </div>
 
-    <script>
-        // Telegram Web App инициализация
-        const tg = window.Telegram.WebApp;
-        tg.expand();
-        tg.ready();
-        
-        // Получаем параметр раздела из URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const sectionId = urlParams.get('section') || '1';
-        
-        // Элементы DOM
-        const closeBtn = document.getElementById('close-btn');
-        const sectionTitle = document.getElementById('section-title');
-        const mediaGrid = document.getElementById('media-grid');
-        
-        // Хранилище реакций пользователя
-        const userReactions = new Map();
-        
-        // Закрытие Web App
-        closeBtn.addEventListener('click', () => {
-            tg.close();
-        });
-        
-        // Тестовые данные - БЕЗ ОЖИДАНИЯ ЗАГРУЗКИ
-        const testData = {
-            success: true,
-            section: {
-                id: sectionId,
-                name: sectionId === '1' ? '🎬 Фильмы' : sectionId === '2' ? '💬 Общение' : '📁 Раздел ' + sectionId,
-                description: 'Медиа материалы'
-            },
-            media: [
-                {
-                    id: 1,
-                    file_id: 'test1',
-                    type: 'video',
-                    title: 'Демонстрационное видео о возможностях платформы',
-                    order: 1,
-                    reactions: { likes: 15, eyes: 3, confused: 2, mindblown: 8 }
-                },
-                {
-                    id: 2,
-                    file_id: 'test2',
-                    type: 'video',
-                    title: 'Инструкция по использованию медиа-библиотеки',
-                    order: 2,
-                    reactions: { likes: 7, eyes: 1, confused: 0, mindblown: 2 }
-                },
-                {
-                    id: 3,
-                    file_id: 'test3',
-                    type: 'audio',
-                    title: 'Аудио запись обсуждения новых функций',
-                    order: 3,
-                    reactions: { likes: 12, eyes: 4, confused: 1, mindblown: 3 }
-                },
-                {
-                    id: 4,
-                    file_id: 'test4',
-                    type: 'video',
-                    title: 'Пример работы с реакциями и оценками контента',
-                    order: 4,
-                    reactions: { likes: 23, eyes: 5, confused: 3, mindblown: 12 }
-                },
-                {
-                    id: 5,
-                    file_id: 'test5',
-                    type: 'video',
-                    title: 'Как добавлять новые материалы через бота',
-                    order: 5,
-                    reactions: { likes: 9, eyes: 2, confused: 1, mindblown: 4 }
-                },
-                {
-                    id: 6,
-                    file_id: 'test6',
-                    type: 'audio',
-                    title: 'Подкаст о будущих обновлениях системы',
-                    order: 6,
-                    reactions: { likes: 18, eyes: 6, confused: 2, mindblown: 7 }
-                },
-                {
-                    id: 7,
-                    file_id: 'test7',
-                    type: 'video',
-                    title: 'Видео-отзывы пользователей о работе платформы',
-                    order: 7,
-                    reactions: { likes: 14, eyes: 2, confused: 0, mindblown: 5 }
-                },
-                {
-                    id: 8,
-                    file_id: 'test8',
-                    type: 'audio',
-                    title: 'Музыка для фонового прослушивания во время работы',
-                    order: 8,
-                    reactions: { likes: 11, eyes: 1, confused: 1, mindblown: 2 }
-                }
-            ]
-        };
-        
-        // НЕМЕДЛЕННАЯ загрузка данных при старте
-        function initializeApp() {
-            console.log('Инициализация Web App, раздел:', sectionId);
-            
-            // Устанавливаем заголовок
-            sectionTitle.textContent = testData.section.name;
-            
-            // Отображаем данные
-            displaySectionData(testData);
-            
-            // Показываем уведомление
-            setTimeout(() => {
-                tg.showAlert('✅ Web App успешно загружен!\n\nДля реальных данных добавьте видео через бота в группе.');
-            }, 500);
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
         }
-        
-        // Отображение данных раздела
-        function displaySectionData(data) {
-            // Очищаем сетку
-            mediaGrid.innerHTML = '';
-            
-            if (!data.media || data.media.length === 0) {
-                showEmptyState();
-                return;
-            }
-            
-            // Создаем карточки медиа
-            data.media.forEach(media => {
-                const card = createMediaCard(media);
-                mediaGrid.appendChild(card);
-            });
-        }
-        
-        // Создание карточки медиа
-        function createMediaCard(media) {
-            const card = document.createElement('div');
-            card.className = 'media-card';
-            
-            // Обрезаем название если оно слишком длинное
-            const shortTitle = media.title.length > 40 
-                ? media.title.substring(0, 37) + '...' 
-                : media.title;
-            
-            // Определяем иконку для типа медиа
-            const mediaIcon = media.type === 'video' ? 'fa-video' : 'fa-music';
-            const mediaClass = media.type === 'video' ? 'video' : 'audio';
-            
-            card.innerHTML = `
-                <div class="media-preview ${mediaClass}" data-media-id="${media.id}">
-                    <div class="order-badge">#${media.order}</div>
-                    <i class="fas ${mediaIcon}"></i>
-                </div>
-                <div class="media-info">
-                    <div class="media-title" title="${media.title}">${shortTitle}</div>
-                    <div class="reactions">
-                        <button class="reaction-btn likes" data-reaction="likes" data-media-id="${media.id}">
-                            <i class="fas fa-thumbs-up"></i>
-                            <span>Класс</span>
-                            <span class="reaction-count">${media.reactions.likes}</span>
-                        </button>
-                        <button class="reaction-btn eyes" data-reaction="eyes" data-media-id="${media.id}">
-                            <i class="fas fa-eye"></i>
-                            <span>Глаза</span>
-                            <span class="reaction-count">${media.reactions.eyes}</span>
-                        </button>
-                        <button class="reaction-btn confused" data-reaction="confused" data-media-id="${media.id}">
-                            <i class="fas fa-question-circle"></i>
-                            <span>Не понимаю</span>
-                            <span class="reaction-count">${media.reactions.confused}</span>
-                        </button>
-                        <button class="reaction-btn mindblown" data-reaction="mindblown" data-media-id="${media.id}">
-                            <i class="fas fa-brain"></i>
-                            <span>Взрыв мозга</span>
-                            <span class="reaction-count">${media.reactions.mindblown}</span>
-                        </button>
-                    </div>
-                </div>
-            `;
-            
-            // Обработчик клика на превью
-            const preview = card.querySelector('.media-preview');
-            preview.addEventListener('click', () => {
-                playMedia(media);
-            });
-            
-            // Обработчики реакций
-            const reactionButtons = card.querySelectorAll('.reaction-btn');
-            reactionButtons.forEach(button => {
-                button.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    handleReaction(
-                        media.id,
-                        button.dataset.reaction,
-                        button
-                    );
-                });
-            });
-            
-            return card;
-        }
-        
-        // Воспроизведение медиа
-        function playMedia(media) {
-            const message = media.type === 'video' 
-                ? `🎬 Воспроизведение видео: "${media.title}"`
-                : `🎵 Воспроизведение аудио: "${media.title}"`;
-            
-            tg.showAlert(message + '\n\nВ реальном приложении здесь будет открыт медиа-файл.');
-        }
-        
-        // Обработка реакции
-        function handleReaction(mediaId, reactionType, button) {
-            const key = `${mediaId}_${reactionType}`;
-            
-            // Если реакция уже поставлена - снимаем
-            if (userReactions.has(key)) {
-                userReactions.delete(key);
-                button.classList.remove('active');
-                
-                // Уменьшаем счетчик
-                const countSpan = button.querySelector('.reaction-count');
-                countSpan.textContent = parseInt(countSpan.textContent) - 1;
-                
-            } else {
-                // Удаляем другие реакции этого пользователя для этого медиа
-                for (const [existingKey] of userReactions) {
-                    if (existingKey.startsWith(`${mediaId}_`)) {
-                        userReactions.delete(existingKey);
-                        
-                        // Снимаем активный класс с предыдущей кнопки
-                        const prevReaction = existingKey.split('_')[1];
-                        const prevButton = document.querySelector(
-                            `.reaction-btn[data-media-id="${mediaId}"][data-reaction="${prevReaction}"]`
-                        );
-                        if (prevButton) {
-                            prevButton.classList.remove('active');
-                            
-                            // Уменьшаем счетчик предыдущей реакции
-                            const prevCount = prevButton.querySelector('.reaction-count');
-                            prevCount.textContent = parseInt(prevCount.textContent) - 1;
-                        }
-                    }
-                }
-                
-                // Добавляем новую реакцию
-                userReactions.set(key, true);
-                button.classList.add('active');
-                
-                // Увеличиваем счетчик
-                const countSpan = button.querySelector('.reaction-count');
-                countSpan.textContent = parseInt(countSpan.textContent) + 1;
-                
-                // Показываем уведомление
-                const reactionNames = {
-                    'likes': '👍 Класс',
-                    'eyes': '👀 Глаза',
-                    'confused': '❓ Не понимаю',
-                    'mindblown': '💥 Взрыв мозга'
-                };
-                
-                tg.showAlert(`Вы поставили реакцию: ${reactionNames[reactionType]}\n\nРеакция сохранена локально.`);
-            }
-        }
-        
-        // Показать пустое состояние
-        function showEmptyState() {
-            mediaGrid.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-film"></i>
-                    <h3>Раздел пуст</h3>
-                    <p>В этом разделе пока нет медиа-материалов</p>
-                    <p>Добавьте видео или аудио через бота в группе:</p>
-                    <ol style="text-align: left; display: inline-block; margin-top: 10px;">
-                        <li>Отправьте /start в теме группы</li>
-                        <li>Отправьте видео/аудио файл</li>
-                        <li>Выберите раздел</li>
-                    </ol>
-                </div>
-            `;
-        }
-        
-        // Инициализация при загрузке - НЕМЕДЛЕННО
-        document.addEventListener('DOMContentLoaded', initializeApp);
-        
-        // Для отладки: кнопка перезагрузки в консоли
-        console.log('Web App загружен. Для перезагрузки данных выполните: window.reloadData()');
-        window.reloadData = function() {
-            initializeApp();
-            tg.showAlert('Данные перезагружены!');
-        };
-        
-        // Обработка свайпов
-        let touchStartX = 0;
-        let touchEndX = 0;
-        
-        document.addEventListener('touchstart', e => {
-            touchStartX = e.changedTouches[0].screenX;
-        });
-        
-        document.addEventListener('touchend', e => {
-            touchEndX = e.changedTouches[0].screenX;
-            handleSwipe();
-        });
-        
-        function handleSwipe() {
-            const swipeThreshold = 50;
-            const diff = touchStartX - touchEndX;
-            
-            if (Math.abs(diff) > swipeThreshold) {
-                if (diff > 0) {
-                    tg.showAlert('Следующий раздел - в разработке');
-                } else {
-                    tg.showAlert('Предыдущий раздел - в разработке');
-                }
-            }
-        }
-        
-        // Обработка сообщений от Telegram
-        if (tg.onEvent) {
-            tg.onEvent('viewportChanged', () => {
-                console.log('Размер окна изменен');
-            });
-            
-            tg.onEvent('closed', () => {
-                console.log('Web App закрыт пользователем');
-            });
-        }
-    </script>
-</body>
-</html>            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-shrink: 0;
-        }
-        
-        #close-btn {
-            background: rgba(255,255,255,0.2);
-            border: none;
-            color: white;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            font-size: 20px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        #section-title {
-            font-size: 24px;
-            font-weight: bold;
-            text-align: center;
-            flex-grow: 1;
-        }
-        
-        #media-grid {
-            flex-grow: 1;
-            padding: 20px;
-            overflow-y: auto;
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 20px;
-        }
-        
-        .media-card {
-            background: white;
-            border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
-            border: 1px solid #eee;
-        }
-        
-        .media-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-        }
-        
-        .media-preview {
-            width: 100%;
-            height: 160px;
-            background: linear-gradient(45deg, #f093fb 0%, #f5576c 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 50px;
-            position: relative;
-            cursor: pointer;
-        }
-        
-        .media-preview.video::before {
-            content: "▶";
-            font-size: 40px;
-            background: rgba(0,0,0,0.7);
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .media-preview.audio::before {
-            content: "♪";
-            font-size: 40px;
-            background: rgba(0,0,0,0.7);
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .order-badge {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-        
-        .media-info {
-            padding: 15px;
-        }
-        
-        .media-title {
-            font-weight: bold;
-            margin-bottom: 10px;
-            font-size: 16px;
-            color: #333;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        
-        .reactions {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 10px;
-        }
-        
-        .reaction-btn {
-            background: #f8f9fa;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 10px;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            flex: 1;
-            margin: 0 2px;
-            justify-content: center;
-        }
-        
-        .reaction-btn:hover {
-            background: #e9ecef;
-            transform: scale(1.05);
-        }
-        
-        .reaction-btn.active {
-            background: #e3f2fd;
-            color: #1976d2;
-        }
-        
-        .reaction-btn.likes { color: #4CAF50; }
-        .reaction-btn.eyes { color: #FF9800; }
-        .reaction-btn.confused { color: #9C27B0; }
-        .reaction-btn.mindblown { color: #f44336; }
-        
-        .reaction-count {
-            font-weight: bold;
-            font-size: 12px;
-        }
-        
-        .loading {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            color: #666;
-        }
-        
-        .loading-spinner {
-            width: 50px;
-            height: 50px;
-            border: 5px solid #f3f3f3;
-            border-top: 5px solid #3498db;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 20px;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .error {
-            color: #f44336;
-            text-align: center;
-            padding: 40px;
-            font-size: 18px;
-        }
-        
-        .empty-state {
-            text-align: center;
-            padding: 40px;
-            color: #666;
-            font-size: 18px;
-        }
-        
-        .empty-state i {
-            font-size: 60px;
-            margin-bottom: 20px;
-            color: #ddd;
-        }
-        
-        /* Адаптивность */
-        @media (max-width: 768px) {
-            #app {
-                width: 100%;
-                height: 100%;
-                border-radius: 0;
-            }
-            
-            #media-grid {
-                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-                gap: 15px;
-            }
-            
-            .reaction-btn span {
-                display: none;
-            }
-            
-            .reaction-btn {
-                padding: 8px;
-            }
-        }
-        
-        @media (max-width: 480px) {
-            #media-grid {
-                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            }
-            
-            .media-preview {
-                height: 120px;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div id="app">
-        <div id="header">
-            <button id="close-btn">✕</button>
-            <div id="section-title">Медиа-библиотека</div>
-            <div style="width: 40px;"></div>
-        </div>
-        
-        <div id="media-grid">
-            <!-- Данные будут вставлены через JavaScript -->
-        </div>
-    </div>
 
-    <script>
-        // Telegram Web App инициализация
-        const tg = window.Telegram.WebApp;
-        tg.expand();
-        tg.ready();
-        
-        // Получаем параметр раздела из URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const sectionId = urlParams.get('section') || '1';
-        
-        // Элементы DOM
-        const closeBtn = document.getElementById('close-btn');
-        const sectionTitle = document.getElementById('section-title');
-        const mediaGrid = document.getElementById('media-grid');
-        
-        // Хранилище реакций пользователя
-        const userReactions = new Map();
-        
-        // Закрытие Web App
-        closeBtn.addEventListener('click', () => {
-            tg.close();
-        });
-        
-        // Тестовые данные - БЕЗ ОЖИДАНИЯ ЗАГРУЗКИ
-        const testData = {
-            success: true,
-            section: {
-                id: sectionId,
-                name: sectionId === '1' ? '🎬 Фильмы' : sectionId === '2' ? '💬 Общение' : '📁 Раздел ' + sectionId,
-                description: 'Медиа материалы'
-            },
-            media: [
-                {
-                    id: 1,
-                    file_id: 'test1',
-                    type: 'video',
-                    title: 'Демонстрационное видео о возможностях платформы',
-                    order: 1,
-                    reactions: { likes: 15, eyes: 3, confused: 2, mindblown: 8 }
-                },
-                {
-                    id: 2,
-                    file_id: 'test2',
-                    type: 'video',
-                    title: 'Инструкция по использованию медиа-библиотеки',
-                    order: 2,
-                    reactions: { likes: 7, eyes: 1, confused: 0, mindblown: 2 }
-                },
-                {
-                    id: 3,
-                    file_id: 'test3',
-                    type: 'audio',
-                    title: 'Аудио запись обсуждения новых функций',
-                    order: 3,
-                    reactions: { likes: 12, eyes: 4, confused: 1, mindblown: 3 }
-                },
-                {
-                    id: 4,
-                    file_id: 'test4',
-                    type: 'video',
-                    title: 'Пример работы с реакциями и оценками контента',
-                    order: 4,
-                    reactions: { likes: 23, eyes: 5, confused: 3, mindblown: 12 }
-                },
-                {
-                    id: 5,
-                    file_id: 'test5',
-                    type: 'video',
-                    title: 'Как добавлять новые материалы через бота',
-                    order: 5,
-                    reactions: { likes: 9, eyes: 2, confused: 1, mindblown: 4 }
-                },
-                {
-                    id: 6,
-                    file_id: 'test6',
-                    type: 'audio',
-                    title: 'Подкаст о будущих обновлениях системы',
-                    order: 6,
-                    reactions: { likes: 18, eyes: 6, confused: 2, mindblown: 7 }
-                },
-                {
-                    id: 7,
-                    file_id: 'test7',
-                    type: 'video',
-                    title: 'Видео-отзывы пользователей о работе платформы',
-                    order: 7,
-                    reactions: { likes: 14, eyes: 2, confused: 0, mindblown: 5 }
-                },
-                {
-                    id: 8,
-                    file_id: 'test8',
-                    type: 'audio',
-                    title: 'Музыка для фонового прослушивания во время работы',
-                    order: 8,
-                    reactions: { likes: 11, eyes: 1, confused: 1, mindblown: 2 }
-                }
-            ]
-        };
-        
-        // НЕМЕДЛЕННАЯ загрузка данных при старте
-        function initializeApp() {
-            console.log('Инициализация Web App, раздел:', sectionId);
-            
-            // Устанавливаем заголовок
-            sectionTitle.textContent = testData.section.name;
-            
-            // Отображаем данные
-            displaySectionData(testData);
-            
-            // Показываем уведомление
-            setTimeout(() => {
-                tg.showAlert('✅ Web App успешно загружен!\n\nДля реальных данных добавьте видео через бота в группе.');
-            }, 500);
-        }
-        
-        // Отображение данных раздела
-        function displaySectionData(data) {
-            // Очищаем сетку
-            mediaGrid.innerHTML = '';
-            
-            if (!data.media || data.media.length === 0) {
-                showEmptyState();
-                return;
-            }
-            
-            // Создаем карточки медиа
-            data.media.forEach(media => {
-                const card = createMediaCard(media);
-                mediaGrid.appendChild(card);
-            });
-        }
-        
-        // Создание карточки медиа
-        function createMediaCard(media) {
-            const card = document.createElement('div');
-            card.className = 'media-card';
-            
-            // Обрезаем название если оно слишком длинное
-            const shortTitle = media.title.length > 40 
-                ? media.title.substring(0, 37) + '...' 
-                : media.title;
-            
-            // Определяем иконку для типа медиа
-            const mediaIcon = media.type === 'video' ? 'fa-video' : 'fa-music';
-            const mediaClass = media.type === 'video' ? 'video' : 'audio';
-            
-            card.innerHTML = `
-                <div class="media-preview ${mediaClass}" data-media-id="${media.id}">
-                    <div class="order-badge">#${media.order}</div>
-                    <i class="fas ${mediaIcon}"></i>
-                </div>
-                <div class="media-info">
-                    <div class="media-title" title="${media.title}">${shortTitle}</div>
-                    <div class="reactions">
-                        <button class="reaction-btn likes" data-reaction="likes" data-media-id="${media.id}">
-                            <i class="fas fa-thumbs-up"></i>
-                            <span>Класс</span>
-                            <span class="reaction-count">${media.reactions.likes}</span>
-                        </button>
-                        <button class="reaction-btn eyes" data-reaction="eyes" data-media-id="${media.id}">
-                            <i class="fas fa-eye"></i>
-                            <span>Глаза</span>
-                            <span class="reaction-count">${media.reactions.eyes}</span>
-                        </button>
-                        <button class="reaction-btn confused" data-reaction="confused" data-media-id="${media.id}">
-                            <i class="fas fa-question-circle"></i>
-                            <span>Не понимаю</span>
-                            <span class="reaction-count">${media.reactions.confused}</span>
-                        </button>
-                        <button class="reaction-btn mindblown" data-reaction="mindblown" data-media-id="${media.id}">
-                            <i class="fas fa-brain"></i>
-                            <span>Взрыв мозга</span>
-                            <span class="reaction-count">${media.reactions.mindblown}</span>
-                        </button>
-                    </div>
-                </div>
-            `;
-            
-            // Обработчик клика на превью
-            const preview = card.querySelector('.media-preview');
-            preview.addEventListener('click', () => {
-                playMedia(media);
-            });
-            
-            // Обработчики реакций
-            const reactionButtons = card.querySelectorAll('.reaction-btn');
-            reactionButtons.forEach(button => {
-                button.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    handleReaction(
-                        media.id,
-                        button.dataset.reaction,
-                        button
-                    );
-                });
-            });
-            
-            return card;
-        }
-        
-        // Воспроизведение медиа
-        function playMedia(media) {
-            const message = media.type === 'video' 
-                ? `🎬 Воспроизведение видео: "${media.title}"`
-                : `🎵 Воспроизведение аудио: "${media.title}"`;
-            
-            tg.showAlert(message + '\n\nВ реальном приложении здесь будет открыт медиа-файл.');
-        }
-        
-        // Обработка реакции
-        function handleReaction(mediaId, reactionType, button) {
-            const key = `${mediaId}_${reactionType}`;
-            
-            // Если реакция уже поставлена - снимаем
-            if (userReactions.has(key)) {
-                userReactions.delete(key);
-                button.classList.remove('active');
-                
-                // Уменьшаем счетчик
-                const countSpan = button.querySelector('.reaction-count');
-                countSpan.textContent = parseInt(countSpan.textContent) - 1;
-                
-            } else {
-                // Удаляем другие реакции этого пользователя для этого медиа
-                for (const [existingKey] of userReactions) {
-                    if (existingKey.startsWith(`${mediaId}_`)) {
-                        userReactions.delete(existingKey);
-                        
-                        // Снимаем активный класс с предыдущей кнопки
-                        const prevReaction = existingKey.split('_')[1];
-                        const prevButton = document.querySelector(
-                            `.reaction-btn[data-media-id="${mediaId}"][data-reaction="${prevReaction}"]`
-                        );
-                        if (prevButton) {
-                            prevButton.classList.remove('active');
-                            
-                            // Уменьшаем счетчик предыдущей реакции
-                            const prevCount = prevButton.querySelector('.reaction-count');
-                            prevCount.textContent = parseInt(prevCount.textContent) - 1;
-                        }
-                    }
-                }
-                
-                // Добавляем новую реакцию
-                userReactions.set(key, true);
-                button.classList.add('active');
-                
-                // Увеличиваем счетчик
-                const countSpan = button.querySelector('.reaction-count');
-                countSpan.textContent = parseInt(countSpan.textContent) + 1;
-                
-                // Показываем уведомление
-                const reactionNames = {
-                    'likes': '👍 Класс',
-                    'eyes': '👀 Глаза',
-                    'confused': '❓ Не понимаю',
-                    'mindblown': '💥 Взрыв мозга'
-                };
-                
-                tg.showAlert(`Вы поставили реакцию: ${reactionNames[reactionType]}\n\nРеакция сохранена локально.`);
-            }
-        }
-        
-        // Показать пустое состояние
-        function showEmptyState() {
-            mediaGrid.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-film"></i>
-                    <h3>Раздел пуст</h3>
-                    <p>В этом разделе пока нет медиа-материалов</p>
-                    <p>Добавьте видео или аудио через бота в группе:</p>
-                    <ol style="text-align: left; display: inline-block; margin-top: 10px;">
-                        <li>Отправьте /start в теме группы</li>
-                        <li>Отправьте видео/аудио файл</li>
-                        <li>Выберите раздел</li>
-                    </ol>
-                </div>
-            `;
-        }
-        
-        // Инициализация при загрузке - НЕМЕДЛЕННО
-        document.addEventListener('DOMContentLoaded', initializeApp);
-        
-        // Для отладки: кнопка перезагрузки в консоли
-        console.log('Web App загружен. Для перезагрузки данных выполните: window.reloadData()');
-        window.reloadData = function() {
-            initializeApp();
-            tg.showAlert('Данные перезагружены!');
-        };
-        
-        // Обработка свайпов
-        let touchStartX = 0;
-        let touchEndX = 0;
-        
-        document.addEventListener('touchstart', e => {
-            touchStartX = e.changedTouches[0].screenX;
-        });
-        
-        document.addEventListener('touchend', e => {
-            touchEndX = e.changedTouches[0].screenX;
-            handleSwipe();
-        });
-        
-        function handleSwipe() {
-            const swipeThreshold = 50;
-            const diff = touchStartX - touchEndX;
-            
-            if (Math.abs(diff) > swipeThreshold) {
-                if (diff > 0) {
-                    tg.showAlert('Следующий раздел - в разработке');
-                } else {
-                    tg.showAlert('Предыдущий раздел - в разработке');
-                }
-            }
-        }
-        
-        // Обработка сообщений от Telegram
-        if (tg.onEvent) {
-            tg.onEvent('viewportChanged', () => {
-                console.log('Размер окна изменен');
-            });
-            
-            tg.onEvent('closed', () => {
-                console.log('Web App закрыт пользователем');
-            });
-        }
-    </script>
-</body>
-</html>            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-shrink: 0;
-        }
-        
-        #close-btn {
-            background: rgba(255,255,255,0.2);
-            border: none;
-            color: white;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            font-size: 20px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        #section-title {
-            font-size: 24px;
-            font-weight: bold;
+        .header {
             text-align: center;
-            flex-grow: 1;
-        }
-        
-        #media-grid {
-            flex-grow: 1;
-            padding: 20px;
-            overflow-y: auto;
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 20px;
-        }
-        
-        .media-card {
-            background: white;
-            border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
-            border: 1px solid #eee;
-        }
-        
-        .media-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-        }
-        
-        .media-preview {
-            width: 100%;
-            height: 160px;
-            background: linear-gradient(45deg, #f093fb 0%, #f5576c 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            margin-bottom: 30px;
             color: white;
-            font-size: 50px;
-            position: relative;
-            cursor: pointer;
         }
-        
-        .media-preview.video::before {
-            content: "▶";
-            font-size: 40px;
-            background: rgba(0,0,0,0.7);
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
-        
-        .media-preview.audio::before {
-            content: "♪";
-            font-size: 40px;
-            background: rgba(0,0,0,0.7);
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .order-badge {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background: rgba(0,0,0,0.8);
+
+        .section-info {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
             color: white;
-            padding: 5px 10px;
+        }
+
+        .section-name {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .section-description {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .material-count {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 2px 10px;
             border-radius: 20px;
             font-size: 12px;
-            font-weight: bold;
+            margin-top: 5px;
         }
-        
-        .media-info {
-            padding: 15px;
-        }
-        
-        .media-title {
-            font-weight: bold;
-            margin-bottom: 10px;
-            font-size: 16px;
-            color: #333;
-            white-space: nowrap;
+
+        /* Контейнер для материалов */
+        .materials-container {
+            background: white;
+            border-radius: 16px;
             overflow: hidden;
-            text-overflow: ellipsis;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            min-height: 400px;
         }
-        
-        .reactions {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 10px;
-        }
-        
-        .reaction-btn {
-            background: #f8f9fa;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 10px;
-            font-size: 14px;
+
+        .material-item {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
             cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            flex: 1;
-            margin: 0 2px;
-            justify-content: center;
+            transition: background 0.2s;
         }
-        
-        .reaction-btn:hover {
-            background: #e9ecef;
-            transform: scale(1.05);
+
+        .material-item:hover {
+            background: #f8f9fa;
         }
-        
-        .reaction-btn.active {
-            background: #e3f2fd;
-            color: #1976d2;
+
+        .material-item:last-child {
+            border-bottom: none;
         }
-        
-        .reaction-btn.likes { color: #4CAF50; }
-        .reaction-btn.eyes { color: #FF9800; }
-        .reaction-btn.confused { color: #9C27B0; }
-        .reaction-btn.mindblown { color: #f44336; }
-        
-        .reaction-count {
-            font-weight: bold;
-            font-size: 12px;
-        }
-        
-        .loading {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            color: #666;
-        }
-        
-        .loading-spinner {
-            width: 50px;
-            height: 50px;
-            border: 5px solid #f3f3f3;
-            border-top: 5px solid #3498db;
+
+        .material-type {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            background: #667eea;
+            color: white;
             border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 20px;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .error {
-            color: #f44336;
             text-align: center;
-            padding: 40px;
-            font-size: 18px;
+            line-height: 30px;
+            margin-right: 10px;
+            font-size: 14px;
         }
-        
+
+        .material-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .material-description {
+            color: #666;
+            font-size: 14px;
+            margin-top: 5px;
+            line-height: 1.4;
+        }
+
         .empty-state {
             text-align: center;
-            padding: 40px;
+            padding: 60px 20px;
             color: #666;
-            font-size: 18px;
         }
-        
-        .empty-state i {
-            font-size: 60px;
-            margin-bottom: 20px;
-            color: #ddd;
+
+        .empty-state h3 {
+            margin-bottom: 10px;
+            color: #333;
         }
-        
+
+        /* Навигация */
+        .navigation {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            gap: 10px;
+        }
+
+        .nav-btn {
+            flex: 1;
+            padding: 15px;
+            background: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            color: #667eea;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .nav-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+
+        .nav-btn.prev::before {
+            content: "←";
+        }
+
+        .nav-btn.next::after {
+            content: "→";
+        }
+
+        /* Индикатор прогресса */
+        .progress-indicator {
+            text-align: center;
+            margin-top: 15px;
+            color: white;
+            font-size: 14px;
+        }
+
+        .video-player {
+            width: 100%;
+            height: 250px;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .video-player video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        /* Загрузчик */
+        .loader {
+            text-align: center;
+            padding: 40px;
+            color: white;
+        }
+
+        .loader-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
         /* Адаптивность */
-        @media (max-width: 768px) {
-            #app {
-                width: 100%;
-                height: 100%;
-                border-radius: 0;
-            }
-            
-            #media-grid {
-                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-                gap: 15px;
-            }
-            
-            .reaction-btn span {
-                display: none;
-            }
-            
-            .reaction-btn {
-                padding: 8px;
-            }
-        }
-        
         @media (max-width: 480px) {
-            #media-grid {
-                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            .header h1 {
+                font-size: 20px;
             }
             
-            .media-preview {
-                height: 120px;
+            .material-item {
+                padding: 15px;
+            }
+            
+            .nav-btn {
+                padding: 12px;
+                font-size: 14px;
             }
         }
     </style>
 </head>
 <body>
-    <div id="app">
-        <div id="header">
-            <button id="close-btn">✕</button>
-            <div id="section-title">Загрузка...</div>
-            <div style="width: 40px;"></div>
+    <div class="container">
+        <div class="header">
+            <h1>📚 Медиа-библиотека</h1>
         </div>
-        
-        <div id="media-grid">
-            <div class="loading">
-                <div class="loading-spinner"></div>
-                <p>Загрузка медиа-библиотеки...</p>
+
+        <div class="section-info" id="sectionInfo">
+            <div class="loader">
+                <div class="loader-spinner"></div>
+                <div>Загрузка...</div>
             </div>
         </div>
+
+        <div class="materials-container" id="materialsContainer">
+            <div class="loader">
+                <div class="loader-spinner"></div>
+                <div>Загрузка материалов...</div>
+            </div>
+        </div>
+
+        <div class="navigation" id="navigation" style="display: none;">
+            <button class="nav-btn prev" id="prevBtn" disabled>Назад</button>
+            <div class="progress-indicator" id="progressIndicator"></div>
+            <button class="nav-btn next" id="nextBtn" disabled>Вперед</button>
+        </div>
     </div>
 
     <script>
-        // Telegram Web App инициализация
+        // Инициализация Telegram Web App
         const tg = window.Telegram.WebApp;
         tg.expand();
-        tg.ready();
+        tg.BackButton.hide();
         
-        // Получаем параметр раздела из URL
+        // Получаем параметр section из URL
         const urlParams = new URLSearchParams(window.location.search);
         const sectionId = urlParams.get('section');
         
-        // Конфигурация
-        const BOT_TOKEN = '7672802314:AAF00aFiUc88iiqZoMKDHKQTE6wfNBIbgL4';
-        const API_BASE_URL = `https://api.telegram.org/bot${BOT_TOKEN}`;
-        
-        // Элементы DOM
-        const closeBtn = document.getElementById('close-btn');
-        const sectionTitle = document.getElementById('section-title');
-        const mediaGrid = document.getElementById('media-grid');
-        
-        // Хранилище реакций пользователя
-        const userReactions = new Map();
-        
-        // Закрытие Web App
-        closeBtn.addEventListener('click', () => {
-            tg.close();
-        });
-        
-        // Загрузка медиа раздела с реального API
-        async function loadSectionMedia() {
+        let currentMaterials = [];
+        let currentIndex = 0;
+        let sectionInfo = null;
+
+        // Загружаем информацию о разделе и материалах
+        async function loadSectionData() {
             if (!sectionId) {
-                showError('Не указан раздел');
+                showError('Раздел не указан');
                 return;
             }
-            
+
             try {
-                // Отправляем команду боту для получения медиа
-                const response = await sendCommandToBot(`/getmedia ${sectionId}`);
-                
-                if (response && response.success) {
-                    displaySectionData(response);
+                // Здесь должен быть запрос к вашему API
+                // Для примера используем фиктивные данные
+                const response = {
+                    success: true,
+                    section: {
+                        id: sectionId,
+                        name: "Автомобили",
+                        description: "Обзоры и тест-драйвы",
+                        icon: "🚗"
+                    },
+                    materials: [
+                        {
+                            id: 1,
+                            type: "video",
+                            title: "Обзор Tesla Model 3",
+                            description: "Полный обзор электромобиля",
+                            file_id: "video_file_id_1"
+                        },
+                        {
+                            id: 2,
+                            type: "video",
+                            title: "Тест-драйв BMW M5",
+                            description: "Испытания на треке",
+                            file_id: "video_file_id_2"
+                        },
+                        {
+                            id: 3,
+                            type: "link",
+                            title: "Сравнение кроссоверов",
+                            description: "YouTube видео сравнения",
+                            file_url: "https://youtube.com/watch?v=example"
+                        }
+                    ]
+                };
+
+                if (response.success) {
+                    sectionInfo = response.section;
+                    currentMaterials = response.materials;
+                    
+                    updateSectionInfo();
+                    updateMaterialsDisplay();
+                    updateNavigation();
                 } else {
-                    // Если нет реальных данных, показываем тестовые
-                    showMockData();
+                    showError('Не удалось загрузить данные раздела');
                 }
-                
             } catch (error) {
                 console.error('Ошибка загрузки:', error);
-                // Показываем тестовые данные при ошибке
-                showMockData();
+                showError('Ошибка загрузки данных');
             }
         }
-        
-        // Отправка команды боту через Telegram API
-        async function sendCommandToBot(command) {
-            // В реальном приложении нужно использовать Backend для запросов
-            // Это пример для демонстрации
-            
-            try {
-                // Альтернативный способ - через прямое сообщение боту
-                // В реальности нужен ваш сервер для обработки запросов
-                
-                // Для тестирования возвращаем mock данные
-                return getMockData();
-                
-            } catch (error) {
-                console.error('Ошибка отправки команды:', error);
-                return null;
+
+        // Обновляем информацию о разделе
+        function updateSectionInfo() {
+            const sectionInfoEl = document.getElementById('sectionInfo');
+            if (sectionInfo) {
+                sectionInfoEl.innerHTML = `
+                    <div class="section-name">${sectionInfo.icon} ${sectionInfo.name}</div>
+                    ${sectionInfo.description ? `<div class="section-description">${sectionInfo.description}</div>` : ''}
+                    <div class="material-count">${currentMaterials.length} материалов</div>
+                `;
             }
         }
-        
-        // Тестовые данные
-        function getMockData() {
-            return {
-                success: true,
-                section: {
-                    id: sectionId,
-                    name: sectionId === '1' ? 'Фильмы' : 'Общение',
-                    description: 'Медиа материалы'
-                },
-                media: [
-                    {
-                        id: 1,
-                        file_id: 'BAACAgIAAxkBAAIBcmbFvIAAAbK1p7P0esvVwABb4ZunDAACXisAAq3oWUj0MQj7hL4G1jQE',
-                        type: 'video',
-                        title: 'Пример видео 1',
-                        order: 1,
-                        reactions: { likes: 5, eyes: 2, confused: 1, mindblown: 3 }
-                    },
-                    {
-                        id: 2,
-                        file_id: 'BAACAgIAAxkBAAIBc2bFvIAAAbK1p7P0esvVwABb4ZunDAACXisAAq3oWUj0MQj7hL4G1jQE',
-                        type: 'video',
-                        title: 'Пример видео 2',
-                        order: 2,
-                        reactions: { likes: 3, eyes: 1, confused: 0, mindblown: 1 }
-                    }
-                ]
-            };
-        }
-        
-        // Показать тестовые данные
-        function showMockData() {
-            const mockData = getMockData();
-            displaySectionData(mockData);
+
+        // Отображаем текущий материал
+        function updateMaterialsDisplay() {
+            const container = document.getElementById('materialsContainer');
             
-            // Показать уведомление, что это тестовые данные
-            tg.showAlert('⚠️ Используются тестовые данные. Добавьте реальные видео через бота.');
-        }
-        
-        // Отображение данных раздела
-        function displaySectionData(data) {
-            if (!data.success || !data.media) {
-                showError('Нет данных для отображения');
+            if (currentMaterials.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <h3>📭 Раздел пуст</h3>
+                        <p>В этом разделе пока нет материалов</p>
+                    </div>
+                `;
                 return;
             }
+
+            const material = currentMaterials[currentIndex];
             
-            // Устанавливаем заголовок
-            sectionTitle.textContent = data.section.name;
+            let content = '';
             
-            // Очищаем сетку
-            mediaGrid.innerHTML = '';
-            
-            if (data.media.length === 0) {
-                showEmptyState();
-                return;
+            if (material.type === 'video') {
+                content = `
+                    <div class="video-player">
+                        <video id="videoPlayer" controls>
+                            <source src="https://example.com/video.mp4" type="video/mp4">
+                            Ваш браузер не поддерживает видео.
+                        </video>
+                    </div>
+                `;
             }
             
-            // Создаем карточки медиа
-            data.media.forEach(media => {
-                const card = createMediaCard(media);
-                mediaGrid.appendChild(card);
-            });
-        }
-        
-        // Создание карточки медиа
-        function createMediaCard(media) {
-            const card = document.createElement('div');
-            card.className = 'media-card';
-            
-            // Обрезаем название если оно слишком длинное
-            const shortTitle = media.title.length > 50 
-                ? media.title.substring(0, 47) + '...' 
-                : media.title;
-            
-            // Определяем иконку для типа медиа
-            const mediaIcon = media.type === 'video' ? 'fa-video' : 'fa-music';
-            const mediaClass = media.type === 'video' ? 'video' : 'audio';
-            
-            card.innerHTML = `
-                <div class="media-preview ${mediaClass}" data-media-id="${media.id}">
-                    <div class="order-badge">#${media.order}</div>
-                    <i class="fas ${mediaIcon}"></i>
-                </div>
-                <div class="media-info">
-                    <div class="media-title" title="${media.title}">${shortTitle}</div>
-                    <div class="reactions">
-                        <button class="reaction-btn likes" data-reaction="likes" data-media-id="${media.id}">
-                            <i class="fas fa-thumbs-up"></i>
-                            <span>Класс</span>
-                            <span class="reaction-count">${media.reactions.likes}</span>
-                        </button>
-                        <button class="reaction-btn eyes" data-reaction="eyes" data-media-id="${media.id}">
-                            <i class="fas fa-eye"></i>
-                            <span>Глаза</span>
-                            <span class="reaction-count">${media.reactions.eyes}</span>
-                        </button>
-                        <button class="reaction-btn confused" data-reaction="confused" data-media-id="${media.id}">
-                            <i class="fas fa-question-circle"></i>
-                            <span>Не понимаю</span>
-                            <span class="reaction-count">${media.reactions.confused}</span>
-                        </button>
-                        <button class="reaction-btn mindblown" data-reaction="mindblown" data-media-id="${media.id}">
-                            <i class="fas fa-brain"></i>
-                            <span>Взрыв мозга</span>
-                            <span class="reaction-count">${media.reactions.mindblown}</span>
-                        </button>
+            content += `
+                <div class="material-item">
+                    <div style="display: flex; align-items: start;">
+                        <div class="material-type">
+                            ${getMaterialIcon(material.type)}
+                        </div>
+                        <div style="flex: 1;">
+                            <div class="material-title">${material.title}</div>
+                            ${material.description ? `<div class="material-description">${material.description}</div>` : ''}
+                            <div style="margin-top: 10px; font-size: 12px; color: #888;">
+                                Материал ${currentIndex + 1} из ${currentMaterials.length}
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
             
-            // Обработчик клика на превью
-            const preview = card.querySelector('.media-preview');
-            preview.addEventListener('click', () => {
-                playMedia(media);
-            });
+            container.innerHTML = content;
             
-            // Обработчики реакций
-            const reactionButtons = card.querySelectorAll('.reaction-btn');
-            reactionButtons.forEach(button => {
-                button.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    handleReaction(
-                        media.id,
-                        button.dataset.reaction,
-                        button
-                    );
-                });
-            });
-            
-            return card;
-        }
-        
-        // Воспроизведение медиа через Telegram
-        function playMedia(media) {
-            if (media.type === 'video') {
-                // Для видео можно открыть в Telegram
-                tg.showAlert(`🎬 Воспроизведение видео: ${media.title}\n\nФайл будет открыт в Telegram...`);
-                
-                // Пытаемся открыть видео через Telegram
+            // Автозапуск видео
+            if (material.type === 'video') {
                 setTimeout(() => {
-                    // В реальном приложении нужно использовать file_id для воспроизведения
-                    tg.openLink(`https://t.me/`);
-                }, 1000);
-                
-            } else {
-                // Для аудио
-                tg.showAlert(`🎵 Воспроизведение аудио: ${media.title}`);
-            }
-        }
-        
-        // Обработка реакции
-        async function handleReaction(mediaId, reactionType, button) {
-            const key = `${mediaId}_${reactionType}`;
-            
-            // Если реакция уже поставлена - снимаем
-            if (userReactions.has(key)) {
-                userReactions.delete(key);
-                button.classList.remove('active');
-                
-                // Уменьшаем счетчик
-                const countSpan = button.querySelector('.reaction-count');
-                countSpan.textContent = parseInt(countSpan.textContent) - 1;
-                
-            } else {
-                // Удаляем другие реакции этого пользователя для этого медиа
-                for (const [existingKey] of userReactions) {
-                    if (existingKey.startsWith(`${mediaId}_`)) {
-                        userReactions.delete(existingKey);
-                        
-                        // Снимаем активный класс с предыдущей кнопки
-                        const prevReaction = existingKey.split('_')[1];
-                        const prevButton = document.querySelector(
-                            `.reaction-btn[data-media-id="${mediaId}"][data-reaction="${prevReaction}"]`
-                        );
-                        if (prevButton) {
-                            prevButton.classList.remove('active');
-                            
-                            // Уменьшаем счетчик предыдущей реакции
-                            const prevCount = prevButton.querySelector('.reaction-count');
-                            prevCount.textContent = parseInt(prevCount.textContent) - 1;
-                        }
+                    const videoPlayer = document.getElementById('videoPlayer');
+                    if (videoPlayer) {
+                        // videoPlayer.play().catch(e => console.log('Автозапуск отключен'));
                     }
-                }
-                
-                // Добавляем новую реакцию
-                userReactions.set(key, true);
-                button.classList.add('active');
-                
-                // Увеличиваем счетчик
-                const countSpan = button.querySelector('.reaction-count');
-                countSpan.textContent = parseInt(countSpan.textContent) + 1;
-                
-                // Отправляем на сервер
-                try {
-                    await sendReactionToServer(mediaId, reactionType);
-                } catch (error) {
-                    console.error('Ошибка отправки реакции:', error);
-                }
+                }, 500);
             }
         }
-        
-        // Отправка реакции на сервер
-        async function sendReactionToServer(mediaId, reactionType) {
-            // В реальности нужно отправлять запрос к боту
-            // Используем команду /react через Telegram API
-            console.log(`Реакция отправлена: media=${mediaId}, reaction=${reactionType}`);
+
+        // Обновляем навигацию
+        function updateNavigation() {
+            const navigation = document.getElementById('navigation');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const progressIndicator = document.getElementById('progressIndicator');
             
-            // Можно использовать tg.sendData для отправки данных обратно в бота
-            if (tg.sendData) {
-                tg.sendData(JSON.stringify({
-                    action: 'reaction',
-                    media_id: mediaId,
-                    reaction: reactionType
-                }));
+            if (currentMaterials.length > 1) {
+                navigation.style.display = 'flex';
+                prevBtn.disabled = currentIndex === 0;
+                nextBtn.disabled = currentIndex === currentMaterials.length - 1;
+                progressIndicator.textContent = `${currentIndex + 1} / ${currentMaterials.length}`;
+                
+                // Обработчики кнопок навигации
+                prevBtn.onclick = () => {
+                    if (currentIndex > 0) {
+                        currentIndex--;
+                        updateMaterialsDisplay();
+                        updateNavigation();
+                    }
+                };
+                
+                nextBtn.onclick = () => {
+                    if (currentIndex < currentMaterials.length - 1) {
+                        currentIndex++;
+                        updateMaterialsDisplay();
+                        updateNavigation();
+                    }
+                };
+            } else {
+                navigation.style.display = 'none';
             }
-            
-            return new Promise(resolve => setTimeout(resolve, 300));
         }
-        
-        // Показать состояние ошибки
+
+        // Получаем иконку для типа материала
+        function getMaterialIcon(type) {
+            const icons = {
+                'video': '🎬',
+                'photo': '📷',
+                'document': '📄',
+                'link': '🔗'
+            };
+            return icons[type] || '📁';
+        }
+
+        // Показываем ошибку
         function showError(message) {
-            mediaGrid.innerHTML = `
-                <div class="error">
-                    <i class="fas fa-exclamation-triangle" style="font-size: 48px; margin-bottom: 20px;"></i>
-                    <h3>Ошибка</h3>
+            const container = document.getElementById('materialsContainer');
+            container.innerHTML = `
+                <div class="empty-state">
+                    <h3>❌ Ошибка</h3>
                     <p>${message}</p>
-                    <button onclick="loadSectionMedia()" style="
-                        margin-top: 20px;
+                    <button onclick="location.reload()" style="
+                        margin-top: 15px;
                         padding: 10px 20px;
-                        background: #3498db;
+                        background: #667eea;
                         color: white;
                         border: none;
-                        border-radius: 5px;
+                        border-radius: 8px;
                         cursor: pointer;
-                    ">
-                        Попробовать снова
-                    </button>
+                    ">Повторить</button>
                 </div>
             `;
         }
-        
-        // Показать пустое состояние
-        function showEmptyState() {
-            mediaGrid.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-film"></i>
-                    <h3>Раздел пуст</h3>
-                    <p>В этом разделе пока нет медиа-материалов</p>
-                    <p>Добавьте видео или аудио через бота в группе</p>
-                </div>
-            `;
-        }
-        
-        // Инициализация при загрузке
-        document.addEventListener('DOMContentLoaded', () => {
-            loadSectionMedia();
-        });
-        
-        // Обработка свайпов для навигации
+
+        // Загружаем данные при старте
+        document.addEventListener('DOMContentLoaded', loadSectionData);
+
+        // Обработка свайпов на мобильных устройствах
         let touchStartX = 0;
         let touchEndX = 0;
-        
+
         document.addEventListener('touchstart', e => {
             touchStartX = e.changedTouches[0].screenX;
         });
-        
+
         document.addEventListener('touchend', e => {
             touchEndX = e.changedTouches[0].screenX;
             handleSwipe();
         });
-        
+
         function handleSwipe() {
             const swipeThreshold = 50;
             const diff = touchStartX - touchEndX;
-            
+
             if (Math.abs(diff) > swipeThreshold) {
-                if (diff > 0) {
-                    // Свайп влево - следующий раздел
-                    tg.showAlert('Следующий раздел (в разработке)');
-                } else {
-                    // Свайп вправо - предыдущий раздел
-                    tg.showAlert('Предыдущий раздел (в разработке)');
+                if (diff > 0 && currentIndex < currentMaterials.length - 1) {
+                    // Свайп влево - следующий
+                    currentIndex++;
+                    updateMaterialsDisplay();
+                    updateNavigation();
+                } else if (diff < 0 && currentIndex > 0) {
+                    // Свайп вправо - предыдущий
+                    currentIndex--;
+                    updateMaterialsDisplay();
+                    updateNavigation();
                 }
             }
         }
-        
-        // Обработка данных от Telegram
-        tg.onEvent('viewportChanged', (event) => {
-            console.log('Viewport changed:', event);
-        });
-        
-        // Обработка закрытия
-        tg.onEvent('closed', () => {
-            console.log('Web App закрыт');
-        });
     </script>
 </body>
 </html>
