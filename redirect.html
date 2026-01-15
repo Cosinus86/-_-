@@ -3,43 +3,36 @@
 <head>
     <meta charset="UTF-8">
     
-    <!-- OG теги для превью -->
-    <meta property="og:title" content="📚 Библиотека РЦ" />
-    <meta property="og:description" content="Открыть в Telegram" />
-    <meta property="og:image" content="https://raw.githubusercontent.com/cosinus86/cosinus86.github.io/main/-_-/preview_redirect.jpg" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:url" content="https://cosinus86.github.io/-_-/redirect.html" />
+    <!-- ЭТО САМОЕ ВАЖНОЕ - OG теги для превью -->
+    <meta property="og:title" content="📚" />
+    <meta property="og:description" content=" " />
+    <meta property="og:image" content="https://cosinus86.github.io/-_-/YOUR_IMAGE.jpg" />
+    <meta property="og:url" content="https://cosinus86.github.io/-_-/preview.html" />
     
-    <!-- Редирект через 0 секунд -->
-    <meta http-equiv="refresh" content="0; url=https://t.me/VideomatRC_bot?start=welcome">
+    <!-- Мгновенный редирект в бота -->
+    <script>
+        // Получаем section_id из URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const sectionId = urlParams.get('s') || 'default';
+        
+        // Мгновенный редирект
+        window.location.href = `https://t.me/VideomatRC_bot?start=${sectionId}`;
+    </script>
     
     <style>
+        /* Минимальные стили на случай, если редирект не сработал */
         body {
             margin: 0;
             padding: 0;
-            background: #f0f0f0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-        .loading {
-            font-family: Arial, sans-serif;
+            background: black;
+            color: white;
+            font-family: sans-serif;
             text-align: center;
+            padding-top: 100px;
         }
     </style>
-    
-    <!-- Двойной редирект на всякий случай -->
-    <script>
-        setTimeout(function() {
-            window.location.href = "https://t.me/VideomatRC_bot?start=welcome";
-        }, 100);
-    </script>
 </head>
 <body>
-    <div class="loading">
-        <p>Перенаправление в Telegram...</p>
-    </div>
+    <p>Redirecting to Telegram...</p>
 </body>
 </html>
