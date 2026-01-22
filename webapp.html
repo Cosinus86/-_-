@@ -14,27 +14,482 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f5f5f5;
-            padding: 20px;
-            color: #333;
+            background: #0f0f0f;
+            color: #fff;
+            padding: 8px;
         }
 
-        .header {
+        /* Шапка с названием раздела */
+        .section-header {
+            position: sticky;
+            top: 0;
+            background: #0f0f0f;
+            padding: 12px 8px;
+            z-index: 100;
+            border-bottom: 1px solid #2c2c2c;
+            margin-bottom: 12px;
+        }
+
+        .section-title-btn {
+            background: #272727;
+            border: none;
+            color: #fff;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            transition: background 0.2s;
+        }
+
+        .section-title-btn:hover {
+            background: #3d3d3d;
+        }
+
+        /* Сетка материалов */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 20px;
+            min-height: calc(100vh - 180px);
+        }
+
+        .grid-item {
+            aspect-ratio: 16/9;
+            background: #272727;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .grid-item:hover {
+            transform: scale(1.02);
+        }
+
+        .special-item {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .special-link {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            color: white;
+            text-decoration: none;
+            font-size: 14px;
             text-align: center;
-            margin-bottom: 30px;
-            padding: 20px;
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            padding: 12px;
+            font-weight: 500;
         }
 
-        .section-name {
-            font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 10px;
-            color: #2c3e50;
+        .video-thumbnail {
+            width: 100%;
+            height: 70%;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            position: relative;
+            overflow: hidden;
         }
 
+        .video-thumbnail::after {
+            content: "▶";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 20px;
+            color: rgba(255, 255, 255, 0.9);
+            text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+        }
+
+        .video-info {
+            padding: 8px;
+            height: 30%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .video-number {
+            font-size: 12px;
+            color: #aaa;
+            font-weight: 500;
+        }
+
+        /* Пагинация */
+        .pagination {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #0f0f0f;
+            padding: 12px;
+            border-top: 1px solid #2c2c2c;
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            z-index: 100;
+        }
+
+        .page-btn {
+            background: #272727;
+            border: none;
+            color: #fff;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .page-btn.active {
+            background: #3ea6ff;
+            color: #0f0f0f;
+            font-weight: 600;
+        }
+
+        .page-btn:hover:not(.active) {
+            background: #3d3d3d;
+        }
+
+        .nav-arrows {
+            display: flex;
+            gap: 8px;
+        }
+
+        .nav-btn {
+            background: #272727;
+            border: none;
+            color: #fff;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .nav-btn:hover:not(:disabled) {
+            background: #3d3d3d;
+        }
+
+        /* Загрузчик */
+        .loader {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            background: rgba(15, 15, 15, 0.9);
+            padding: 24px;
+            border-radius: 12px;
+            z-index: 1000;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #272727;
+            border-top-color: #3ea6ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 12px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Адаптивность */
+        @media (max-width: 480px) {
+            .grid-container {
+                gap: 6px;
+            }
+            
+            .grid-item {
+                border-radius: 6px;
+            }
+            
+            .section-title-btn {
+                padding: 10px 12px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Шапка -->
+    <div class="section-header">
+        <button class="section-title-btn" id="sectionBtn">
+            <span id="sectionName">Загрузка...</span>
+            <span>🏠</span>
+        </button>
+    </div>
+
+    <!-- Сетка материалов -->
+    <div class="grid-container" id="gridContainer">
+        <!-- Будет заполнено JavaScript -->
+    </div>
+
+    <!-- Пагинация -->
+    <div class="pagination">
+        <div class="nav-arrows">
+            <button class="nav-btn" id="prevBtn">←</button>
+        </div>
+        <div class="page-numbers" id="pageNumbers">
+            <!-- Будет заполнено JavaScript -->
+        </div>
+        <div class="nav-arrows">
+            <button class="nav-btn" id="nextBtn">→</button>
+        </div>
+    </div>
+
+    <!-- Загрузчик -->
+    <div class="loader" id="loader">
+        <div class="spinner"></div>
+        <div>Загрузка...</div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        const sectionId = urlParams.get('section');
+        
+        // Конфигурация
+        const ITEMS_PER_PAGE = 30; // 3x10
+        let currentMaterials = [];
+        let currentPage = 1;
+        let totalPages = 1;
+        
+        // Основная функция загрузки данных
+        async function loadSectionData() {
+            showLoader();
+            
+            try {
+                // Загружаем данные раздела
+                const sectionData = await fetchSectionData();
+                currentMaterials = sectionData.materials || [];
+                totalPages = Math.ceil((currentMaterials.length + 1) / ITEMS_PER_PAGE); // +1 для специальной ячейки
+                
+                updateUI();
+                hideLoader();
+                
+            } catch (error) {
+                console.error('Ошибка загрузки:', error);
+                showError();
+            }
+        }
+        
+        function updateUI() {
+            updateSectionHeader();
+            updateGrid();
+            updatePagination();
+        }
+        
+        function updateSectionHeader() {
+            document.getElementById('sectionName').textContent = 'Название раздела';
+        }
+        
+        function updateGrid() {
+            const container = document.getElementById('gridContainer');
+            container.innerHTML = '';
+            
+            // Рассчитываем позиции для текущей страницы
+            const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
+            const endIdx = startIdx + ITEMS_PER_PAGE;
+            
+            // Добавляем специальную ячейку только на первой странице
+            if (currentPage === 1) {
+                const specialItem = createSpecialItem();
+                container.appendChild(specialItem);
+            }
+            
+            // Добавляем материалы
+            for (let i = startIdx; i < Math.min(endIdx, currentMaterials.length); i++) {
+                const material = currentMaterials[i];
+                const item = createMaterialItem(material, i + 1);
+                container.appendChild(item);
+            }
+            
+            // Добавляем пустые ячейки для заполнения сетки
+            const totalItems = container.children.length;
+            const remaining = ITEMS_PER_PAGE - totalItems;
+            
+            for (let i = 0; i < remaining; i++) {
+                const emptyItem = document.createElement('div');
+                emptyItem.className = 'grid-item';
+                container.appendChild(emptyItem);
+            }
+        }
+        
+        function createSpecialItem() {
+            const div = document.createElement('div');
+            div.className = 'grid-item special-item';
+            div.innerHTML = `
+                <a href="https://dzen.ru/id/695c270f10ea6a3d0c9ec85a?tab=suites" 
+                   class="special-link" 
+                   target="_blank">
+                    Дзен-канал с дополнительными материалами
+                </a>
+            `;
+            return div;
+        }
+        
+        function createMaterialItem(material, number) {
+            const div = document.createElement('div');
+            div.className = 'grid-item';
+            div.onclick = () => openMaterial(material);
+            
+            div.innerHTML = `
+                <div class="video-thumbnail"></div>
+                <div class="video-info">
+                    <div class="video-number">#${number}</div>
+                </div>
+            `;
+            
+            return div;
+        }
+        
+        function updatePagination() {
+            const container = document.getElementById('pageNumbers');
+            container.innerHTML = '';
+            
+            // Показываем только 5 страниц вокруг текущей
+            const startPage = Math.max(1, currentPage - 2);
+            const endPage = Math.min(totalPages, currentPage + 2);
+            
+            for (let i = startPage; i <= endPage; i++) {
+                const btn = document.createElement('button');
+                btn.className = `page-btn ${i === currentPage ? 'active' : ''}`;
+                btn.textContent = i;
+                btn.onclick = () => changePage(i);
+                container.appendChild(btn);
+            }
+            
+            // Обновляем кнопки навигации
+            document.getElementById('prevBtn').disabled = currentPage === 1;
+            document.getElementById('nextBtn').disabled = currentPage === totalPages;
+        }
+        
+        function changePage(page) {
+            if (page < 1 || page > totalPages) return;
+            currentPage = page;
+            updateGrid();
+            updatePagination();
+            window.scrollTo(0, 0);
+        }
+        
+        function openMaterial(material) {
+            if (material.file_type === 'video' && material.file_id) {
+                tg.openVideo(material.file_id);
+            } else if (material.file_id) {
+                tg.openDocument(material.file_id);
+            }
+        }
+        
+        // Вспомогательные функции
+        function showLoader() {
+            document.getElementById('loader').style.display = 'block';
+        }
+        
+        function hideLoader() {
+            document.getElementById('loader').style.display = 'none';
+        }
+        
+        function showError() {
+            const container = document.getElementById('gridContainer');
+            container.innerHTML = `
+                <div style="grid-column: 1 / -1; text-align: center; padding: 40px;">
+                    <div style="color: #aaa; margin-bottom: 20px;">❌ Ошибка загрузки</div>
+                    <button onclick="loadSectionData()" style="
+                        background: #3ea6ff;
+                        border: none;
+                        color: #0f0f0f;
+                        padding: 10px 20px;
+                        border-radius: 8px;
+                        font-weight: 600;
+                        cursor: pointer;
+                    ">Повторить</button>
+                </div>
+            `;
+            hideLoader();
+        }
+        
+        // Имитация загрузки данных
+        async function fetchSectionData() {
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    // Генерируем тестовые данные
+                    const materials = [];
+                    for (let i = 1; i <= 89; i++) {
+                        materials.push({
+                            id: i,
+                            file_type: 'video',
+                            file_id: `video_${i}`
+                        });
+                    }
+                    
+                    resolve({
+                        name: 'Раздел',
+                        materials: materials
+                    });
+                }, 500);
+            });
+        }
+        
+        // Инициализация
+        document.getElementById('sectionBtn').onclick = () => {
+            window.location.href = '/'; // Главная страница со списком разделов
+        };
+        
+        document.getElementById('prevBtn').onclick = () => changePage(currentPage - 1);
+        document.getElementById('nextBtn').onclick = () => changePage(currentPage + 1);
+        
+        // Обработка свайпов
+        let touchStartX = 0;
+        document.addEventListener('touchstart', e => {
+            touchStartX = e.touches[0].clientX;
+        });
+        
+        document.addEventListener('touchend', e => {
+            const touchEndX = e.changedTouches[0].clientX;
+            const diff = touchStartX - touchEndX;
+            
+            if (Math.abs(diff) > 50) {
+                if (diff > 0) {
+                    // Свайп влево - следующая страница
+                    changePage(currentPage + 1);
+                } else {
+                    // Свайп вправо - предыдущая страница
+                    changePage(currentPage - 1);
+                }
+            }
+        });
+        
+        // Загрузка при старте
+        loadSectionData();
+    </script>
+</body>
+</html>
         .section-info {
             color: #7f8c8d;
             font-size: 14px;
