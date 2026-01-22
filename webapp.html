@@ -579,33 +579,51 @@
         
         // Имитация загрузки данных (замените на реальный запрос)
         async function fetchSectionData() {
-            return new Promise(resolve => {
-                setTimeout(() => {
-                    // Генерируем тестовые данные
-                    const materials = [];
-                    for (let i = 1; i <= 89; i++) {
-                        materials.push({
-                            id: i,
-                            file_type: 'video',
-                            file_id: `video_${i}`,
-                            title: `Видео ${i}`
-                        });
-                    }
-                    
-                    // Тестовое изображение (замените на реальное из бота)
-                    const testImages = [
-                        'https://images.unsplash.com/photo-1495615080073-6b89c9839ce0?w=800&auto=format&fit=crop',
-                        'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=800&auto=format&fit=crop',
-                        'https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=800&auto=format&fit=crop'
-                    ];
-                    
-                    resolve({
+            try {
+                // РЕАЛЬНЫЙ ЗАПРОС К API
+                const response = await fetch(`${API_URL}/section?section=${sectionId}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                return data;
+                
+            } catch (error) {
+                console.error('Ошибка загрузки данных:', error);
+                
+                // Фолбэк на тестовые данные при ошибке
+                const materials = [];
+                for (let i = 1; i <= 89; i++) {
+                    materials.push({
+                        id: i,
+                        file_type: 'video',
+                        file_id: `video_${i}`,
+                        title: `Видео ${i}`
+                    });
+                }
+                
+                const testImages = [
+                    'https://images.unsplash.com/photo-1495615080073-6b89c9839ce0?w=800&auto=format&fit=crop',
+                    'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=800&auto=format&fit=crop',
+                    'https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=800&auto=format&fit=crop'
+                ];
+                
+                return {
+                    success: true,
+                    section: {
                         name: 'Космология',
                         cover_image: testImages[Math.floor(Math.random() * testImages.length)],
-                        materials: materials
-                    });
-                }, 800);
-            });
+                    },
+                    materials: materials
+                };
+            }
         }
         
         // Инициализация
