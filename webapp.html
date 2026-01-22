@@ -390,25 +390,34 @@
         let totalPages = 1;
         let sectionData = null;
         
-        // Основная функция загрузки данных
+        // В начале скрипта веб-приложения
+        const API_URL = 'http://localhost:8080/api';
+        
+        // И обновляем функцию loadSectionData
         async function loadSectionData() {
-            showLoader();
-            
+            if (!sectionId) {
+                showError('Раздел не указан');
+                return;
+            }
+        
             try {
-                // Загружаем данные раздела
-                sectionData = await fetchSectionData();
-                currentMaterials = sectionData.materials || [];
+                const response = await fetch(`${API_URL}/section?section=${sectionId}`);
                 
-                // Количество страниц: каждая страница начинается с нового десятка
-                // Формула: ceil((материалы + 1) / 30) где 30 = 3x10
-                totalPages = Math.ceil((currentMaterials.length + 1) / ITEMS_PER_PAGE);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
                 
-                updateUI();
-                hideLoader();
+                const data = await response.json();
                 
+                if (data.error) {
+                    showError(data.error);
+                    return;
+                }
+                
+                // Обработка данных...
             } catch (error) {
                 console.error('Ошибка загрузки:', error);
-                showError();
+                showError('Не удалось загрузить данные раздела');
             }
         }
         
