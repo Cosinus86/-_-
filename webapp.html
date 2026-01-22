@@ -401,6 +401,7 @@
             }
         
             try {
+                // ИСПРАВЛЕННЫЙ ЗАПРОС
                 const response = await fetch(`${API_URL}/section?section=${sectionId}`);
                 
                 if (!response.ok) {
@@ -414,7 +415,12 @@
                     return;
                 }
                 
-                // Обработка данных...
+                currentSection = data.section;
+                currentMaterials = data.materials || [];
+                totalPages = Math.ceil((currentMaterials.length + 1) / ITEMS_PER_PAGE);
+                
+                updateUI();
+                
             } catch (error) {
                 console.error('Ошибка загрузки:', error);
                 showError('Не удалось загрузить данные раздела');
