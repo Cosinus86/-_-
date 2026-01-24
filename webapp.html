@@ -444,25 +444,14 @@
         const urlParams = new URLSearchParams(window.location.search);
         const sectionId = urlParams.get('section');
         
-        // Автоматическое определение URL на основе источника
-        function getApiUrl() {
-            // Если открыто через телеграм, используем текущий источник
-            if (window.location.hostname.includes('telegram.org')) {
-                return 'https://e2e1891bf42e4be6-178-19-251-54.serveousercontent.com';
-            }
-            // Для локальной разработки
-            return window.location.hostname === 'localhost' 
-                ? 'http://localhost:8080'
-                : 'https://e2e1891bf42e4be6-178-19-251-54.serveousercontent.com';
-        }
-
-        const API_URL = getApiUrl();
+        // ФИКСИРОВАННЫЙ API URL - ВСТАВЬТЕ СВОЙ АКТУАЛЬНЫЙ!
+        // Получите его из консоли при запуске start.bat
+        const API_URL = 'https://a4391d966e4e9226-178-19-251-54.serveousercontent.com';
         
         console.log('🚀 Веб-приложение запущено');
         console.log('📌 Section ID:', sectionId);
         console.log('🌐 API URL:', API_URL);
         console.log('📱 Platform:', tg.platform);
-        console.log('🔍 Telegram WebApp версия:', tg.version);
         
         // Конфигурация
         const ITEMS_PER_PAGE = 30;
@@ -479,17 +468,45 @@
                 const url = `${API_URL}/api/section?section=${sectionId}`;
                 console.log('🔗 Запрос к:', url);
                 
-                const response = await fetch(url, {
-                    headers: {
-                        'Accept': 'application/json',
-                        'Cache-Control': 'no-cache'
+                // Пробуем несколько раз если ошибка
+                let response;
+                let retries = 3;
+                
+                while (retries > 0) {
+                    try {
+                        response = await fetch(url, {
+                            headers: {
+                                'Accept': 'application/json',
+                                'Cache-Control': 'no-cache'
+                            },
+                            mode: 'cors',
+                            credentials: 'omit'
+                        });
+                        break;
+                    } catch (fetchError) {
+                        retries--;
+                        if (retries === 0) throw fetchError;
+                        console.log(`🔄 Повторная попытка... (осталось: ${retries})`);
+                        await new Promise(resolve => setTimeout(resolve, 1000));
                     }
-                });
+                }
                 
                 console.log('📡 Ответ:', response.status, response.statusText);
                 
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+                    // Пробуем альтернативный endpoint
+                    const altUrl = `${API_URL}/api/section?section=${sectionId}&_=${Date.now()}`;
+                    console.log('🔄 Пробуем альтернативный URL:', altUrl);
+                    
+                    response = await fetch(altUrl, {
+                        headers: {
+                            'Accept': 'application/json'
+                        }
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+                    }
                 }
                 
                 const data = await response.json();
@@ -510,10 +527,8 @@
                     // Фоновое изображение
                     if (data.section.cover_image) {
                         const img = document.getElementById('sectionBgImage');
-                        img.src = data.section.cover_image;
-                        img.onload = () => {
-                            console.log('🖼️ Фоновое изображение загружено');
-                        };
+                        // Добавляем timestamp для избежания кэширования
+                        img.src = data.section.cover_image + '?_=' + Date.now();
                     }
                 }
                 
@@ -541,15 +556,27 @@
                             API: ${API_URL}<br>
                             Раздел: ${sectionId}
                         </div>
-                        <button onclick="loadSectionData()" style="
-                            background: #3ea6ff;
-                            border: none;
-                            color: #0f0f0f;
-                            padding: 10px 20px;
-                            border-radius: 8px;
-                            font-weight: 600;
-                            cursor: pointer;
-                        ">Повторить</button>
+                        <div style="margin: 20px 0;">
+                            <button onclick="location.reload()" style="
+                                background: #3ea6ff;
+                                border: none;
+                                color: #0f0f0f;
+                                padding: 10px 20px;
+                                border-radius: 8px;
+                                font-weight: 600;
+                                cursor: pointer;
+                                margin-right: 10px;
+                            ">Обновить</button>
+                            <button onclick="tg.close()" style="
+                                background: #666;
+                                border: none;
+                                color: white;
+                                padding: 10px 20px;
+                                border-radius: 8px;
+                                font-weight: 600;
+                                cursor: pointer;
+                            ">Закрыть</button>
+                        </div>
                     </div>
                 `;
                 
