@@ -6,6 +6,7 @@
     <title>Медиа-библиотека</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
+        /* ВСЕ СТИЛИ ОСТАЮТСЯ БЕЗ ИЗМЕНЕНИЙ ИЗ ВАШЕГО ФАЙЛА */
         * {
             margin: 0;
             padding: 0;
@@ -19,22 +20,343 @@
             padding: 0;
         }
 
-        /* Фон раздела с изображением */
-        .section-background {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 200px;
-            z-index: 0;
-            overflow: hidden;
-        }
+        /* ... ВСЕ ОСТАЛЬНЫЕ СТИЛИ ИЗ ВАШЕГО ФАЙЛА ... */
 
-        .section-bg-image {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            filter: brightness(0.7);
+        .retry-button {
+            background: #3ea6ff;
+            border: none;
+            color: #0f0f0f;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 16px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Фон с изображением раздела -->
+    <div class="section-background" id="sectionBackground">
+        <img class="section-bg-image" id="sectionBgImage" src="" alt="">
+        <div class="section-gradient"></div>
+    </div>
+
+    <!-- Контент -->
+    <div class="content-wrapper">
+        <!-- Шапка -->
+        <div class="section-header">
+            <button class="section-title-btn" id="sectionBtn">
+                <div class="btn-content">
+                    <span class="btn-arrow">←</span>
+                    <span id="sectionName">Загрузка...</span>
+                </div>
+                <span>🏠</span>
+            </button>
+        </div>
+
+        <!-- Сетка материалов -->
+        <div class="grid-container" id="gridContainer">
+            <div class="loader">
+                <div class="spinner"></div>
+                <div>Загрузка...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Пагинация -->
+    <div class="pagination">
+        <div class="nav-arrows">
+            <button class="nav-btn" id="prevBtn">←</button>
+        </div>
+        <div class="page-numbers" id="pageNumbers"></div>
+        <div class="nav-arrows">
+            <button class="nav-btn" id="nextBtn">→</button>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        
+        // Получаем ВСЕ данные из URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const jsonData = urlParams.get('d');  // 'd' - сокращение от 'data'
+        
+        console.log('🚀 Веб-приложение запущено');
+        console.log('📦 Данные из URL:', jsonData ? jsonData.substring(0, 100) + '...' : 'Нет данных');
+        
+        // Конфигурация
+        const ITEMS_PER_PAGE = 30;
+        let currentMaterials = [];
+        let currentPage = 1;
+        let totalPages = 1;
+        
+        // Основная функция загрузки данных
+        function loadSectionData() {
+            console.log('📥 Обрабатываем данные...');
+            showLoader();
+            
+            try {
+                if (!jsonData) {
+                    throw new Error('❌ Данные не получены. Откройте через бота.');
+                }
+                
+                // ПРОСТО ДЕКОДИРУЕМ URL-кодирование
+                const decodedData = decodeURIComponent(jsonData);
+                const sectionData = JSON.parse(decodedData);
+                
+                console.log('✅ Данные успешно получены');
+                console.log('📁 Раздел:', sectionData.section.name);
+                console.log('📊 Материалов:', sectionData.materials.length);
+                
+                // Сохраняем данные
+                currentMaterials = sectionData.materials || [];
+                
+                // Обновляем интерфейс
+                document.getElementById('sectionName').textContent = sectionData.section.name;
+                
+                if (sectionData.section.cover_image) {
+                    const img = document.getElementById('sectionBgImage');
+                    img.src = sectionData.section.cover_image;
+                }
+                
+                // Расчет страниц
+                const materialsPerPage = ITEMS_PER_PAGE - 1;
+                totalPages = Math.max(1, Math.ceil(currentMaterials.length / materialsPerPage));
+                
+                // Обновляем интерфейс
+                updateGrid();
+                updatePagination();
+                
+                hideLoader();
+                console.log('🎉 Загрузка завершена!');
+                
+            } catch (error) {
+                console.error('❌ Ошибка:', error);
+                
+                // Показываем ошибку
+                document.getElementById('gridContainer').innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 40px;">
+                        <div style="color: #ff6b6b; margin-bottom: 20px;">❌ Ошибка загрузки</div>
+                        <div style="color: #888; font-size: 14px; margin-bottom: 20px;">
+                            ${error.message}<br><br>
+                            <strong>Что делать:</strong><br>
+                            1. Закройте это окно<br>
+                            2. Нажмите кнопку раздела в боте снова
+                        </div>
+                        <button onclick="tg.close()" style="
+                            background: #3ea6ff;
+                            border: none;
+                            color: #0f0f0f;
+                            padding: 10px 20px;
+                            border-radius: 8px;
+                            font-weight: 600;
+                            cursor: pointer;
+                        ">Закрыть</button>
+                    </div>
+                `;
+                
+                hideLoader();
+            }
+        }
+        
+        // Функция для открытия файлов через Telegram
+        function openMaterial(material) {
+            console.log('🎬 Открытие:', material.id, material.file_type);
+            
+            if (!material.file_id) {
+                tg.showAlert('❌ Файл недоступен');
+                return;
+            }
+            
+            const fileType = material.file_type || 'document';
+            
+            // Используем методы Telegram
+            if (fileType === 'video' && typeof tg.openVideo === 'function') {
+                tg.openVideo(material.file_id);
+            } else if (fileType === 'photo' && typeof tg.openPhoto === 'function') {
+                tg.openPhoto(material.file_id);
+            } else if (typeof tg.openDocument === 'function') {
+                tg.openDocument(material.file_id);
+            } else {
+                // Fallback
+                tg.showPopup({
+                    title: 'Открыть файл',
+                    message: 'Нажмите "Открыть"',
+                    buttons: [
+                        {id: 'open', type: 'default', text: 'Открыть'},
+                        {id: 'cancel', type: 'cancel', text: 'Отмена'}
+                    ]
+                }, (buttonId) => {
+                    if (buttonId === 'open') {
+                        const botToken = '7672802314:AAF00aFiUc88iiqZoMKDHKQTE6wfNBIbgL4';
+                        window.open(`https://api.telegram.org/file/bot${botToken}/${material.file_id}`, '_blank');
+                    }
+                });
+            }
+        }
+        
+        // Обновление сетки
+        function updateGrid() {
+            const gridContainer = document.getElementById('gridContainer');
+            
+            if (!currentMaterials.length) {
+                gridContainer.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 40px;">
+                        <div style="color: #aaa;">📭 В этом разделе пока нет материалов</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Расчет элементов для текущей страницы
+            const itemsPerPage = ITEMS_PER_PAGE - 1;
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = Math.min(startIndex + itemsPerPage, currentMaterials.length);
+            const pageMaterials = currentMaterials.slice(startIndex, endIndex);
+            
+            let gridHTML = '';
+            
+            // Специальный элемент для статистики
+            gridHTML += `
+                <div class="grid-item special-item" onclick="tg.showAlert('📚 В разделе: ${currentMaterials.length} материалов')">
+                    <div class="special-link">
+                        📊 Статистика<br>
+                        <small>Материалов: ${currentMaterials.length}</small>
+                    </div>
+                </div>
+            `;
+            
+            // Элементы материалов
+            pageMaterials.forEach((material, index) => {
+                const globalIndex = startIndex + index + 1;
+                const bgColor = getMaterialColor(material.file_type);
+                
+                gridHTML += `
+                    <div class="grid-item" onclick="openMaterial(${JSON.stringify(material).replace(/"/g, '&quot;')})">
+                        <div class="video-number">${globalIndex}</div>
+                        <div class="video-thumbnail" style="background: ${bgColor};"></div>
+                        <div style="
+                            position: absolute;
+                            bottom: 0;
+                            left: 0;
+                            right: 0;
+                            background: rgba(0,0,0,0.8);
+                            color: white;
+                            padding: 6px;
+                            font-size: 11px;
+                            text-overflow: ellipsis;
+                            overflow: hidden;
+                            white-space: nowrap;
+                        ">
+                            ${getFileTypeIcon(material.file_type)} ${material.description || `#${material.id}`}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            gridContainer.innerHTML = gridHTML;
+        }
+        
+        // Обновление пагинации
+        function updatePagination() {
+            const pageNumbers = document.getElementById('pageNumbers');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            
+            prevBtn.disabled = currentPage === 1;
+            nextBtn.disabled = currentPage === totalPages;
+            
+            let paginationHTML = '';
+            const maxPagesToShow = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
+            let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+            
+            if (endPage - startPage + 1 < maxPagesToShow) {
+                startPage = Math.max(1, endPage - maxPagesToShow + 1);
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                const isActive = i === currentPage;
+                paginationHTML += `
+                    <button class="page-rect ${isActive ? 'active' : ''}" onclick="goToPage(${i})">
+                        ${i}
+                        <div class="page-tooltip">Страница ${i}</div>
+                    </button>
+                `;
+            }
+            
+            pageNumbers.innerHTML = paginationHTML;
+        }
+        
+        // Вспомогательные функции
+        function getMaterialColor(fileType) {
+            const colors = {
+                'video': 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)',
+                'photo': 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                'document': 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                'audio': 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
+            };
+            return colors[fileType] || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+        }
+        
+        function getFileTypeIcon(fileType) {
+            const icons = {
+                'video': '🎬',
+                'photo': '🖼️',
+                'document': '📄',
+                'audio': '🎵'
+            };
+            return icons[fileType] || '📁';
+        }
+        
+        function goToPage(page) {
+            if (page < 1 || page > totalPages) return;
+            currentPage = page;
+            updateGrid();
+            updatePagination();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        
+        function showLoader() {
+            const loader = document.querySelector('.loader');
+            if (loader) loader.style.display = 'block';
+        }
+        
+        function hideLoader() {
+            const loader = document.querySelector('.loader');
+            if (loader) loader.style.display = 'none';
+        }
+        
+        // Обработчики событий
+        document.getElementById('prevBtn').addEventListener('click', () => goToPage(currentPage - 1));
+        document.getElementById('nextBtn').addEventListener('click', () => goToPage(currentPage + 1));
+        
+        document.getElementById('sectionBtn').addEventListener('click', () => {
+            tg.close();
+        });
+        
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('📄 DOM загружен');
+            
+            // Настройка Telegram
+            tg.ready();
+            tg.setHeaderColor('#0f0f0f');
+            tg.setBackgroundColor('#0f0f0f');
+            
+            // Кнопка "Назад"
+            tg.BackButton.show();
+            tg.BackButton.onClick(() => {
+                tg.close();
+            });
+            
+            // Загружаем данные
+            loadSectionData();
+        });
+    </script>
+</body>
+</html>            filter: brightness(0.7);
         }
 
         .section-gradient {
