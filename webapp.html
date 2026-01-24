@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Медиа-библиотека</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * {
             margin: 0;
@@ -329,42 +329,10 @@
             margin-top: 16px;
         }
 
-        /* Модальное окно для файлов */
-        .file-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.9);
-            z-index: 10000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .file-content {
-            max-width: 90%;
-            max-height: 90%;
-        }
-
-        .modal-close {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            color: white;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            font-size: 20px;
-            cursor: pointer;
-        }
-
         /* Адаптивность */
         @media (max-width: 480px) {
             .grid-container {
+                grid-template-columns: repeat(2, 1fr);
                 gap: 6px;
             }
             
@@ -422,114 +390,58 @@
         <div class="nav-arrows">
             <button class="nav-btn" id="prevBtn">←</button>
         </div>
-        <div class="page-numbers" id="pageNumbers">
-            <!-- Будет заполнено JavaScript -->
-        </div>
+        <div class="page-numbers" id="pageNumbers"></div>
         <div class="nav-arrows">
             <button class="nav-btn" id="nextBtn">→</button>
         </div>
-    </div>
-
-    <!-- Модальное окно для файлов -->
-    <div class="file-modal" id="fileModal" style="display: none;">
-        <button class="modal-close" id="modalClose">×</button>
-        <div class="file-content" id="fileContent"></div>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
         
-        // Получаем параметр section из URL
+        // Получаем закодированные данные из URL
         const urlParams = new URLSearchParams(window.location.search);
-        const sectionId = urlParams.get('section');
-        
-        // ФИКСИРОВАННЫЙ API URL - ВСТАВЬТЕ СВОЙ АКТУАЛЬНЫЙ!
-        // Получите его из консоли при запуске start.bat
-        const API_URL = 'https://a4391d966e4e9226-178-19-251-54.serveousercontent.com';
+        const encodedData = urlParams.get('data');
         
         console.log('🚀 Веб-приложение запущено');
-        console.log('📌 Section ID:', sectionId);
-        console.log('🌐 API URL:', API_URL);
-        console.log('📱 Platform:', tg.platform);
+        console.log('📦 Получены данные из URL:', encodedData ? encodedData.substring(0, 50) + '...' : 'Нет данных');
         
         // Конфигурация
         const ITEMS_PER_PAGE = 30;
         let currentMaterials = [];
         let currentPage = 1;
         let totalPages = 1;
+        let sectionData = null;
         
         // Основная функция загрузки данных
-        async function loadSectionData() {
-            console.log('📥 Начинаем загрузку данных...');
+        function loadSectionData() {
+            console.log('📥 Начинаем обработку данных...');
             showLoader();
             
             try {
-                const url = `${API_URL}/api/section?section=${sectionId}`;
-                console.log('🔗 Запрос к:', url);
-                
-                // Пробуем несколько раз если ошибка
-                let response;
-                let retries = 3;
-                
-                while (retries > 0) {
-                    try {
-                        response = await fetch(url, {
-                            headers: {
-                                'Accept': 'application/json',
-                                'Cache-Control': 'no-cache'
-                            },
-                            mode: 'cors',
-                            credentials: 'omit'
-                        });
-                        break;
-                    } catch (fetchError) {
-                        retries--;
-                        if (retries === 0) throw fetchError;
-                        console.log(`🔄 Повторная попытка... (осталось: ${retries})`);
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                    }
+                if (!encodedData) {
+                    throw new Error('❌ Данные не получены. Откройте приложение через бота Telegram.');
                 }
                 
-                console.log('📡 Ответ:', response.status, response.statusText);
+                // Декодируем base64
+                const jsonStr = atob(encodedData);
+                sectionData = JSON.parse(jsonStr);
                 
-                if (!response.ok) {
-                    // Пробуем альтернативный endpoint
-                    const altUrl = `${API_URL}/api/section?section=${sectionId}&_=${Date.now()}`;
-                    console.log('🔄 Пробуем альтернативный URL:', altUrl);
-                    
-                    response = await fetch(altUrl, {
-                        headers: {
-                            'Accept': 'application/json'
-                        }
-                    });
-                    
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
-                    }
-                }
-                
-                const data = await response.json();
-                console.log('✅ Данные получены, success:', data.success);
-                
-                if (!data.success) {
-                    throw new Error(data.error || 'Ошибка сервера');
-                }
+                console.log('✅ Данные успешно декодированы');
+                console.log('📁 Раздел:', sectionData.section.name);
+                console.log('📊 Материалов:', sectionData.materials.length);
                 
                 // Сохраняем данные
-                currentMaterials = data.materials || [];
-                console.log(`📊 Загружено материалов: ${currentMaterials.length}`);
+                currentMaterials = sectionData.materials || [];
                 
-                if (data.section) {
-                    console.log('📁 Раздел:', data.section.name);
-                    document.getElementById('sectionName').textContent = data.section.name;
-                    
-                    // Фоновое изображение
-                    if (data.section.cover_image) {
-                        const img = document.getElementById('sectionBgImage');
-                        // Добавляем timestamp для избежания кэширования
-                        img.src = data.section.cover_image + '?_=' + Date.now();
-                    }
+                // Обновляем интерфейс
+                document.getElementById('sectionName').textContent = sectionData.section.name;
+                
+                if (sectionData.section.cover_image) {
+                    const img = document.getElementById('sectionBgImage');
+                    img.src = sectionData.section.cover_image;
+                    img.onload = () => console.log('🖼️ Фоновое изображение загружено');
                 }
                 
                 // Расчет страниц
@@ -550,42 +462,28 @@
                 // Показываем ошибку
                 document.getElementById('gridContainer').innerHTML = `
                     <div style="grid-column: 1 / -1; text-align: center; padding: 40px;">
-                        <div style="color: #aaa; margin-bottom: 20px;">❌ Ошибка загрузки</div>
+                        <div style="color: #aaa; margin-bottom: 20px;">${error.message}</div>
                         <div style="color: #888; font-size: 14px; margin-bottom: 20px;">
-                            ${error.message}<br>
-                            API: ${API_URL}<br>
-                            Раздел: ${sectionId}
+                            Пожалуйста, откройте раздел через бота Telegram
                         </div>
-                        <div style="margin: 20px 0;">
-                            <button onclick="location.reload()" style="
-                                background: #3ea6ff;
-                                border: none;
-                                color: #0f0f0f;
-                                padding: 10px 20px;
-                                border-radius: 8px;
-                                font-weight: 600;
-                                cursor: pointer;
-                                margin-right: 10px;
-                            ">Обновить</button>
-                            <button onclick="tg.close()" style="
-                                background: #666;
-                                border: none;
-                                color: white;
-                                padding: 10px 20px;
-                                border-radius: 8px;
-                                font-weight: 600;
-                                cursor: pointer;
-                            ">Закрыть</button>
-                        </div>
+                        <button onclick="tg.close()" style="
+                            background: #3ea6ff;
+                            border: none;
+                            color: #0f0f0f;
+                            padding: 10px 20px;
+                            border-radius: 8px;
+                            font-weight: 600;
+                            cursor: pointer;
+                        ">Закрыть</button>
                     </div>
                 `;
                 
                 hideLoader();
             }
         }
-                
+        
         // Функция для открытия файлов через Telegram
-        async function openMaterial(material) {
+        function openMaterial(material) {
             console.log('🎬 Открытие материала:', material.id, material.file_type);
             
             if (!material.file_id) {
@@ -593,62 +491,20 @@
                 return;
             }
             
-            try {
-                // Получаем прямой URL файла через наш API
-                const fileUrl = `${API_URL}/api/file/${material.file_id}`;
-                console.log('🔗 Запрос URL файла:', fileUrl);
-                
-                const response = await fetch(fileUrl);
-                const fileData = await response.json();
-                
-                if (!fileData.success) {
-                    throw new Error(fileData.error || 'Не удалось получить URL файла');
-                }
-                
-                console.log('📁 URL файла получен:', fileData.url);
-                
-                // Открываем файл в зависимости от типа
-                openFileInTelegram(fileData.url, material.file_type, material);
-                
-            } catch (error) {
-                console.error('❌ Ошибка открытия файла:', error);
-                
-                // Fallback: пытаемся открыть через стандартные методы телеграм
-                openTelegramFileDirect(material.file_id, material.file_type);
-            }
-        }
-        
-        // Функция для открытия файла в Telegram WebApp
-        function openFileInTelegram(fileUrl, fileType, material) {
-            console.log(`📁 Открытие ${fileType}:`, fileUrl);
+            const fileType = material.file_type || 'document';
             
-            // Для телеграм WebApp используем window.open
-            // Telegram WebApp может открывать некоторые типы файлов напрямую
-            if (fileType === 'video') {
-                // Для видео используем видео-плеер
-                showVideoPlayer(fileUrl, material);
-            } else if (fileType === 'photo') {
-                // Для фото показываем в модальном окне
-                showImageModal(fileUrl, material);
-            } else {
-                // Для документов открываем в новой вкладке
-                window.open(fileUrl, '_blank');
-            }
-        }
-        
-        // Fallback функция для прямого открытия через Telegram API
-        function openTelegramFileDirect(fileId, fileType) {
-            console.log(`🔄 Fallback открытие ${fileType} с ID:`, fileId.substring(0, 30));
-            
-            // Пробуем использовать встроенные методы телеграм
+            // Пробуем использовать встроенные методы Telegram
             if (fileType === 'video' && typeof tg.openVideo === 'function') {
-                tg.openVideo(fileId);
+                console.log('▶️ Используем tg.openVideo');
+                tg.openVideo(material.file_id);
             } else if (fileType === 'photo' && typeof tg.openPhoto === 'function') {
-                tg.openPhoto(fileId);
+                console.log('🖼️ Используем tg.openPhoto');
+                tg.openPhoto(material.file_id);
             } else if (typeof tg.openDocument === 'function') {
-                tg.openDocument(fileId);
+                console.log('📄 Используем tg.openDocument');
+                tg.openDocument(material.file_id);
             } else {
-                // Если ничего не работает, показываем кнопку для открытия
+                // Fallback: показываем кнопку
                 tg.showPopup({
                     title: 'Открыть файл',
                     message: 'Нажмите "Открыть" для загрузки файла',
@@ -660,55 +516,17 @@
                     if (buttonId === 'open') {
                         // Получаем URL файла через Bot API
                         const botToken = '7672802314:AAF00aFiUc88iiqZoMKDHKQTE6wfNBIbgL4';
-                        const API_URL = null;
+                        const url = `https://api.telegram.org/file/bot${botToken}/${material.file_id}`;
                         window.open(url, '_blank');
                     }
                 });
             }
         }
         
-        // Показ видео-плеера
-        function showVideoPlayer(videoUrl, material) {
-            document.getElementById('fileContent').innerHTML = `
-                <video controls autoplay style="width: 100%; height: 100%;">
-                    <source src="${videoUrl}" type="video/mp4">
-                    Ваш браузер не поддерживает видео.
-                </video>
-                <div style="color: white; text-align: center; margin-top: 10px;">
-                    ${material.description || `Видео #${material.id}`}
-                </div>
-            `;
-            document.getElementById('fileModal').style.display = 'flex';
-            
-            // Останавливаем видео при закрытии
-            const modalClose = document.getElementById('modalClose');
-            modalClose.onclick = function() {
-                document.getElementById('fileModal').style.display = 'none';
-                const video = document.querySelector('video');
-                if (video) video.pause();
-            };
-        }
-        
-        // Показ изображения в модальном окне
-        function showImageModal(imageUrl, material) {
-            document.getElementById('fileContent').innerHTML = `
-                <img src="${imageUrl}" style="max-width: 100%; max-height: 100%; display: block; margin: 0 auto;">
-                <div style="color: white; text-align: center; margin-top: 10px;">
-                    ${material.description || `Изображение #${material.id}`}
-                </div>
-            `;
-            document.getElementById('fileModal').style.display = 'flex';
-            
-            // Закрытие модального окна
-            const modalClose = document.getElementById('modalClose');
-            modalClose.onclick = function() {
-                document.getElementById('fileModal').style.display = 'none';
-            };
-        }
-        
         // Обновление сетки
         function updateGrid() {
             const gridContainer = document.getElementById('gridContainer');
+            
             if (!currentMaterials.length) {
                 gridContainer.innerHTML = `
                     <div style="grid-column: 1 / -1; text-align: center; padding: 40px;">
@@ -728,11 +546,11 @@
             
             // Специальный элемент для статистики
             gridHTML += `
-                <div class="grid-item special-item">
-                    <a href="javascript:void(0)" class="special-link" onclick="tg.showAlert('📚 В разделе: ${currentMaterials.length} материалов')">
+                <div class="grid-item special-item" onclick="tg.showAlert('📚 В разделе: ${currentMaterials.length} материалов')">
+                    <div class="special-link">
                         📊 Статистика<br>
                         <small>Материалов: ${currentMaterials.length}</small>
-                    </a>
+                    </div>
                 </div>
             `;
             
@@ -758,7 +576,7 @@
                             overflow: hidden;
                             white-space: nowrap;
                         ">
-                            ${getFileTypeIcon(material.file_type)} ${material.description || `Материал #${material.id}`}
+                            ${getFileTypeIcon(material.file_type)} ${material.description || `#${material.id}`}
                         </div>
                     </div>
                 `;
@@ -820,13 +638,11 @@
         }
         
         function showLoader() {
-            const loader = document.querySelector('.loader');
-            if (loader) loader.style.display = 'block';
+            document.querySelector('.loader').style.display = 'block';
         }
         
         function hideLoader() {
-            const loader = document.querySelector('.loader');
-            if (loader) loader.style.display = 'none';
+            document.querySelector('.loader').style.display = 'none';
         }
         
         // Обработчики событий
@@ -834,45 +650,26 @@
         document.getElementById('nextBtn').addEventListener('click', () => goToPage(currentPage + 1));
         
         document.getElementById('sectionBtn').addEventListener('click', () => {
-            // Возврат в телеграм
             tg.close();
-        });
-        
-        // Закрытие модального окна при клике вне его
-        document.getElementById('fileModal').addEventListener('click', (e) => {
-            if (e.target.id === 'fileModal') {
-                document.getElementById('fileModal').style.display = 'none';
-            }
         });
         
         // Инициализация
         document.addEventListener('DOMContentLoaded', () => {
             console.log('📄 DOM загружен');
             
-            if (!sectionId) {
-                document.getElementById('gridContainer').innerHTML = `
-                    <div style="grid-column: 1 / -1; text-align: center; padding: 40px;">
-                        <div style="color: #aaa; margin-bottom: 20px;">❌ Раздел не указан</div>
-                        <div style="color: #888; font-size: 14px;">
-                            Откройте раздел через бота в Telegram
-                        </div>
-                    </div>
-                `;
-                return;
-            }
-            
-            loadSectionData();
-            
-            // Настройка телеграм интерфейса
+            // Настройка Telegram интерфейса
             tg.ready();
             tg.setHeaderColor('#0f0f0f');
             tg.setBackgroundColor('#0f0f0f');
             
-            // Кнопка "Назад" для телеграм
+            // Кнопка "Назад"
             tg.BackButton.show();
             tg.BackButton.onClick(() => {
                 tg.close();
             });
+            
+            // Загружаем данные
+            loadSectionData();
         });
     </script>
 </body>
