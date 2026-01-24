@@ -329,6 +329,810 @@
             margin-top: 16px;
         }
 
+        /* Модальное окно для файлов */
+        .file-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .file-content {
+            max-width: 90%;
+            max-height: 90%;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        /* Адаптивность */
+        @media (max-width: 480px) {
+            .grid-container {
+                gap: 6px;
+            }
+            
+            .grid-item {
+                border-radius: 6px;
+            }
+            
+            .section-title-btn {
+                padding: 10px 12px;
+                font-size: 14px;
+            }
+            
+            .page-rect {
+                width: 5px;
+                height: 20px;
+            }
+            
+            .page-rect.active {
+                height: 26px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Фон с изображением раздела -->
+    <div class="section-background" id="sectionBackground">
+        <img class="section-bg-image" id="sectionBgImage" src="" alt="">
+        <div class="section-gradient"></div>
+    </div>
+
+    <!-- Контент -->
+    <div class="content-wrapper">
+        <!-- Шапка -->
+        <div class="section-header">
+            <button class="section-title-btn" id="sectionBtn">
+                <div class="btn-content">
+                    <span class="btn-arrow">←</span>
+                    <span id="sectionName">Загрузка...</span>
+                </div>
+                <span>🏠</span>
+            </button>
+        </div>
+
+        <!-- Сетка материалов -->
+        <div class="grid-container" id="gridContainer">
+            <div class="loader">
+                <div class="spinner"></div>
+                <div>Загрузка...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Пагинация -->
+    <div class="pagination">
+        <div class="nav-arrows">
+            <button class="nav-btn" id="prevBtn">←</button>
+        </div>
+        <div class="page-numbers" id="pageNumbers">
+            <!-- Будет заполнено JavaScript -->
+        </div>
+        <div class="nav-arrows">
+            <button class="nav-btn" id="nextBtn">→</button>
+        </div>
+    </div>
+
+    <!-- Модальное окно для файлов -->
+    <div class="file-modal" id="fileModal" style="display: none;">
+        <button class="modal-close" id="modalClose">×</button>
+        <div class="file-content" id="fileContent"></div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        
+        // Получаем параметр section из URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const sectionId = urlParams.get('section');
+        
+        // Используем Serveo URL для API
+        const API_URL = 'https://2550fd60640df9f1-178-19-251-54.serveousercontent.com';
+        
+        console.log('🚀 Веб-приложение запущено');
+        console.log('📌 Section ID:', sectionId);
+        console.log('🌐 API URL:', API_URL);
+        console.log('📱 Platform:', tg.platform);
+        console.log('🔍 Telegram WebApp версия:', tg.version);
+        
+        // Конфигурация
+        const ITEMS_PER_PAGE = 30;
+        let currentMaterials = [];
+        let currentPage = 1;
+        let totalPages = 1;
+        
+        // Основная функция загрузки данных
+        async function loadSectionData() {
+            console.log('📥 Начинаем загрузку данных...');
+            showLoader();
+            
+            try {
+                const url = `${API_URL}/api/section?section=${sectionId}`;
+                console.log('🔗 Запрос к:', url);
+                
+                const response = await fetch(url, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'Cache-Control': 'no-cache'
+                    }
+                });
+                
+                console.log('📡 Ответ:', response.status, response.statusText);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+                }
+                
+                const data = await response.json();
+                console.log('✅ Данные получены, success:', data.success);
+                
+                if (!data.success) {
+                    throw new Error(data.error || 'Ошибка сервера');
+                }
+                
+                // Сохраняем данные
+                currentMaterials = data.materials || [];
+                console.log(`📊 Загружено материалов: ${currentMaterials.length}`);
+                
+                if (data.section) {
+                    console.log('📁 Раздел:', data.section.name);
+                    document.getElementById('sectionName').textContent = data.section.name;
+                    
+                    // Фоновое изображение
+                    if (data.section.cover_image) {
+                        const img = document.getElementById('sectionBgImage');
+                        img.src = data.section.cover_image;
+                        img.onload = () => {
+                            console.log('🖼️ Фоновое изображение загружено');
+                        };
+                    }
+                }
+                
+                // Расчет страниц
+                const materialsPerPage = ITEMS_PER_PAGE - 1;
+                totalPages = Math.max(1, Math.ceil(currentMaterials.length / materialsPerPage));
+                console.log(`📄 Страниц: ${totalPages}`);
+                
+                // Обновляем интерфейс
+                updateGrid();
+                updatePagination();
+                
+                hideLoader();
+                console.log('🎉 Загрузка завершена!');
+                
+            } catch (error) {
+                console.error('❌ Ошибка загрузки:', error);
+                
+                // Показываем ошибку
+                document.getElementById('gridContainer').innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 40px;">
+                        <div style="color: #aaa; margin-bottom: 20px;">❌ Ошибка загрузки</div>
+                        <div style="color: #888; font-size: 14px; margin-bottom: 20px;">
+                            ${error.message}<br>
+                            API: ${API_URL}<br>
+                            Раздел: ${sectionId}
+                        </div>
+                        <button onclick="loadSectionData()" style="
+                            background: #3ea6ff;
+                            border: none;
+                            color: #0f0f0f;
+                            padding: 10px 20px;
+                            border-radius: 8px;
+                            font-weight: 600;
+                            cursor: pointer;
+                        ">Повторить</button>
+                    </div>
+                `;
+                
+                hideLoader();
+            }
+        }
+        
+        // Функция для открытия файлов через Telegram
+        async function openMaterial(material) {
+            console.log('🎬 Открытие материала:', material.id, material.file_type);
+            
+            if (!material.file_id) {
+                tg.showAlert('❌ Файл недоступен');
+                return;
+            }
+            
+            try {
+                // Получаем прямой URL файла через наш API
+                const fileUrl = `${API_URL}/api/file/${material.file_id}`;
+                console.log('🔗 Запрос URL файла:', fileUrl);
+                
+                const response = await fetch(fileUrl);
+                const fileData = await response.json();
+                
+                if (!fileData.success) {
+                    throw new Error(fileData.error || 'Не удалось получить URL файла');
+                }
+                
+                console.log('📁 URL файла получен:', fileData.url);
+                
+                // Открываем файл в зависимости от типа
+                openFileInTelegram(fileData.url, material.file_type, material);
+                
+            } catch (error) {
+                console.error('❌ Ошибка открытия файла:', error);
+                
+                // Fallback: пытаемся открыть через стандартные методы телеграм
+                openTelegramFileDirect(material.file_id, material.file_type);
+            }
+        }
+        
+        // Функция для открытия файла в Telegram WebApp
+        function openFileInTelegram(fileUrl, fileType, material) {
+            console.log(`📁 Открытие ${fileType}:`, fileUrl);
+            
+            // Для телеграм WebApp используем window.open
+            // Telegram WebApp может открывать некоторые типы файлов напрямую
+            if (fileType === 'video') {
+                // Для видео используем видео-плеер
+                showVideoPlayer(fileUrl, material);
+            } else if (fileType === 'photo') {
+                // Для фото показываем в модальном окне
+                showImageModal(fileUrl, material);
+            } else {
+                // Для документов открываем в новой вкладке
+                window.open(fileUrl, '_blank');
+            }
+        }
+        
+        // Fallback функция для прямого открытия через Telegram API
+        function openTelegramFileDirect(fileId, fileType) {
+            console.log(`🔄 Fallback открытие ${fileType} с ID:`, fileId.substring(0, 30));
+            
+            // Пробуем использовать встроенные методы телеграм
+            if (fileType === 'video' && typeof tg.openVideo === 'function') {
+                tg.openVideo(fileId);
+            } else if (fileType === 'photo' && typeof tg.openPhoto === 'function') {
+                tg.openPhoto(fileId);
+            } else if (typeof tg.openDocument === 'function') {
+                tg.openDocument(fileId);
+            } else {
+                // Если ничего не работает, показываем кнопку для открытия
+                tg.showPopup({
+                    title: 'Открыть файл',
+                    message: 'Нажмите "Открыть" для загрузки файла',
+                    buttons: [
+                        {id: 'open', type: 'default', text: 'Открыть'},
+                        {id: 'cancel', type: 'cancel', text: 'Отмена'}
+                    ]
+                }, (buttonId) => {
+                    if (buttonId === 'open') {
+                        // Получаем URL файла через Bot API
+                        const botToken = '7672802314:AAF00aFiUc88iiqZoMKDHKQTE6wfNBIbgL4';
+                        const url = `https://api.telegram.org/file/bot${botToken}/${fileId}`;
+                        window.open(url, '_blank');
+                    }
+                });
+            }
+        }
+        
+        // Показ видео-плеера
+        function showVideoPlayer(videoUrl, material) {
+            document.getElementById('fileContent').innerHTML = `
+                <video controls autoplay style="width: 100%; height: 100%;">
+                    <source src="${videoUrl}" type="video/mp4">
+                    Ваш браузер не поддерживает видео.
+                </video>
+                <div style="color: white; text-align: center; margin-top: 10px;">
+                    ${material.description || `Видео #${material.id}`}
+                </div>
+            `;
+            document.getElementById('fileModal').style.display = 'flex';
+            
+            // Останавливаем видео при закрытии
+            const modalClose = document.getElementById('modalClose');
+            modalClose.onclick = function() {
+                document.getElementById('fileModal').style.display = 'none';
+                const video = document.querySelector('video');
+                if (video) video.pause();
+            };
+        }
+        
+        // Показ изображения в модальном окне
+        function showImageModal(imageUrl, material) {
+            document.getElementById('fileContent').innerHTML = `
+                <img src="${imageUrl}" style="max-width: 100%; max-height: 100%; display: block; margin: 0 auto;">
+                <div style="color: white; text-align: center; margin-top: 10px;">
+                    ${material.description || `Изображение #${material.id}`}
+                </div>
+            `;
+            document.getElementById('fileModal').style.display = 'flex';
+            
+            // Закрытие модального окна
+            const modalClose = document.getElementById('modalClose');
+            modalClose.onclick = function() {
+                document.getElementById('fileModal').style.display = 'none';
+            };
+        }
+        
+        // Обновление сетки
+        function updateGrid() {
+            const gridContainer = document.getElementById('gridContainer');
+            if (!currentMaterials.length) {
+                gridContainer.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 40px;">
+                        <div style="color: #aaa;">📭 В этом разделе пока нет материалов</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Расчет элементов для текущей страницы
+            const itemsPerPage = ITEMS_PER_PAGE - 1;
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = Math.min(startIndex + itemsPerPage, currentMaterials.length);
+            const pageMaterials = currentMaterials.slice(startIndex, endIndex);
+            
+            let gridHTML = '';
+            
+            // Специальный элемент для статистики
+            gridHTML += `
+                <div class="grid-item special-item">
+                    <a href="javascript:void(0)" class="special-link" onclick="tg.showAlert('📚 В разделе: ${currentMaterials.length} материалов')">
+                        📊 Статистика<br>
+                        <small>Материалов: ${currentMaterials.length}</small>
+                    </a>
+                </div>
+            `;
+            
+            // Элементы материалов
+            pageMaterials.forEach((material, index) => {
+                const globalIndex = startIndex + index + 1;
+                const bgColor = getMaterialColor(material.file_type);
+                
+                gridHTML += `
+                    <div class="grid-item" onclick="openMaterial(${JSON.stringify(material).replace(/"/g, '&quot;')})">
+                        <div class="video-number">${globalIndex}</div>
+                        <div class="video-thumbnail" style="background: ${bgColor};"></div>
+                        <div style="
+                            position: absolute;
+                            bottom: 0;
+                            left: 0;
+                            right: 0;
+                            background: rgba(0,0,0,0.8);
+                            color: white;
+                            padding: 6px;
+                            font-size: 11px;
+                            text-overflow: ellipsis;
+                            overflow: hidden;
+                            white-space: nowrap;
+                        ">
+                            ${getFileTypeIcon(material.file_type)} ${material.description || `Материал #${material.id}`}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            gridContainer.innerHTML = gridHTML;
+        }
+        
+        // Обновление пагинации
+        function updatePagination() {
+            const pageNumbers = document.getElementById('pageNumbers');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            
+            prevBtn.disabled = currentPage === 1;
+            nextBtn.disabled = currentPage === totalPages;
+            
+            let paginationHTML = '';
+            for (let i = 1; i <= totalPages; i++) {
+                const isActive = i === currentPage;
+                paginationHTML += `
+                    <button class="page-rect ${isActive ? 'active' : ''}" onclick="goToPage(${i})">
+                        ${i}
+                        <div class="page-tooltip">Страница ${i}</div>
+                    </button>
+                `;
+            }
+            
+            pageNumbers.innerHTML = paginationHTML;
+        }
+        
+        // Вспомогательные функции
+        function getMaterialColor(fileType) {
+            const colors = {
+                'video': 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)',
+                'photo': 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                'document': 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                'audio': 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
+            };
+            return colors[fileType] || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+        }
+        
+        function getFileTypeIcon(fileType) {
+            const icons = {
+                'video': '🎬',
+                'photo': '🖼️',
+                'document': '📄',
+                'audio': '🎵'
+            };
+            return icons[fileType] || '📁';
+        }
+        
+        function goToPage(page) {
+            if (page < 1 || page > totalPages) return;
+            currentPage = page;
+            updateGrid();
+            updatePagination();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        
+        function showLoader() {
+            const loader = document.querySelector('.loader');
+            if (loader) loader.style.display = 'block';
+        }
+        
+        function hideLoader() {
+            const loader = document.querySelector('.loader');
+            if (loader) loader.style.display = 'none';
+        }
+        
+        // Обработчики событий
+        document.getElementById('prevBtn').addEventListener('click', () => goToPage(currentPage - 1));
+        document.getElementById('nextBtn').addEventListener('click', () => goToPage(currentPage + 1));
+        
+        document.getElementById('sectionBtn').addEventListener('click', () => {
+            // Возврат в телеграм
+            tg.close();
+        });
+        
+        // Закрытие модального окна при клике вне его
+        document.getElementById('fileModal').addEventListener('click', (e) => {
+            if (e.target.id === 'fileModal') {
+                document.getElementById('fileModal').style.display = 'none';
+            }
+        });
+        
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('📄 DOM загружен');
+            
+            if (!sectionId) {
+                document.getElementById('gridContainer').innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 40px;">
+                        <div style="color: #aaa; margin-bottom: 20px;">❌ Раздел не указан</div>
+                        <div style="color: #888; font-size: 14px;">
+                            Откройте раздел через бота в Telegram
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+            
+            loadSectionData();
+            
+            // Настройка телеграм интерфейса
+            tg.ready();
+            tg.setHeaderColor('#0f0f0f');
+            tg.setBackgroundColor('#0f0f0f');
+            
+            // Кнопка "Назад" для телеграм
+            tg.BackButton.show();
+            tg.BackButton.onClick(() => {
+                tg.close();
+            });
+        });
+    </script>
+</body>
+</html>            filter: brightness(0.7);
+        }
+
+        .section-gradient {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 100px;
+            background: linear-gradient(to bottom, transparent, #0f0f0f);
+            z-index: 1;
+        }
+
+        /* Шапка с кнопкой возврата */
+        .section-header {
+            position: sticky;
+            top: 0;
+            padding: 12px 8px;
+            z-index: 100;
+            margin-bottom: 12px;
+        }
+
+        .section-title-btn {
+            background: rgba(39, 39, 39, 0.6);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            color: #fff;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            transition: all 0.3s;
+            position: relative;
+            z-index: 2;
+        }
+
+        .section-title-btn:hover {
+            border-color: rgba(255, 255, 255, 0.5);
+            background: rgba(39, 39, 39, 0.8);
+        }
+
+        .btn-content {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-arrow {
+            font-size: 18px;
+            opacity: 0.8;
+        }
+
+        /* Контент поверх фона */
+        .content-wrapper {
+            position: relative;
+            z-index: 2;
+            padding: 0 8px;
+            padding-bottom: 80px;
+        }
+
+        /* Сетка материалов */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .grid-item {
+            aspect-ratio: 16/9;
+            background: rgba(39, 39, 39, 0.9);
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .grid-item:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .special-item {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+        }
+
+        .special-link {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            color: white;
+            text-decoration: none;
+            font-size: 13px;
+            text-align: center;
+            padding: 16px;
+            font-weight: 500;
+            line-height: 1.4;
+        }
+
+        .video-thumbnail {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .video-thumbnail::after {
+            content: "▶";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 20px;
+            color: rgba(255, 255, 255, 0.9);
+            text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+        }
+
+        /* Номер видео в левом верхнем углу */
+        .video-number {
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            background: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 4px;
+            z-index: 1;
+            min-width: 24px;
+            text-align: center;
+        }
+
+        /* Пагинация - вертикальные прямоугольники */
+        .pagination {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(15, 15, 15, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 12px;
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            z-index: 100;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .page-numbers {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+
+        .page-rect {
+            width: 6px;
+            height: 24px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 2px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .page-rect.active {
+            background: #3ea6ff;
+            height: 32px;
+            box-shadow: 0 0 10px rgba(62, 166, 255, 0.5);
+        }
+
+        .page-rect:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.3);
+            height: 28px;
+        }
+
+        /* Подсказка с номером страницы */
+        .page-tooltip {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #3ea6ff;
+            color: #0f0f0f;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            white-space: nowrap;
+            margin-bottom: 4px;
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: none;
+        }
+
+        .page-rect:hover .page-tooltip {
+            opacity: 1;
+        }
+
+        .nav-arrows {
+            display: flex;
+            gap: 8px;
+        }
+
+        .nav-btn {
+            background: rgba(39, 39, 39, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 16px;
+        }
+
+        .nav-btn:hover:not(:disabled) {
+            background: rgba(62, 166, 255, 0.2);
+            border-color: #3ea6ff;
+            transform: scale(1.1);
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        /* Загрузчик */
+        .loader {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            background: rgba(15, 15, 15, 0.9);
+            padding: 24px;
+            border-radius: 12px;
+            z-index: 1000;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(39, 39, 39, 0.5);
+            border-top-color: #3ea6ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 12px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Сообщение об ошибке */
+        .error-message {
+            text-align: center;
+            padding: 40px 20px;
+            color: #aaa;
+            grid-column: 1 / -1;
+        }
+
+        .error-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .retry-button {
+            background: #3ea6ff;
+            border: none;
+            color: #0f0f0f;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 16px;
+        }
+
         /* Адаптивность */
         @media (max-width: 480px) {
             .grid-container {
