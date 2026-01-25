@@ -74,253 +74,183 @@
         </div>
     </div>
 
-    <script>
+        <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
+        tg.MainButton.hide(); // Скрываем нижнюю кнопку
+        tg.setHeaderColor('#000000'); // Пытаемся сделать верхнюю панель черной
         
-        // Получаем ВСЕ данные из URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const jsonData = urlParams.get('d');  // 'd' - сокращение от 'data'
-        
-        console.log('🚀 Веб-приложение запущено');
-        console.log('📦 Данные из URL:', jsonData ? jsonData.substring(0, 100) + '...' : 'Нет данных');
-        
-        // Конфигурация
-        const ITEMS_PER_PAGE = 30;
-        let currentMaterials = [];
+        // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
+        const ITEMS_PER_PAGE = 30; // 3 ряда по 10 (или 29 + 1 статистика)
+        let ALL_SECTIONS = []; // Все разделы с сервера
+        let CURRENT_SECTION_INDEX = 0; // Текущий открытый раздел (0 - первый)
         let currentPage = 1;
         let totalPages = 1;
         
-        // Основная функция загрузки данных
-        function loadSectionData() {
-            console.log('📥 Обрабатываем данные...');
+        // ===== ЗАГРУЗКА ДАННЫХ =====
+        function loadAllData() {
             showLoader();
+            const urlParams = new URLSearchParams(window.location.search);
+            const jsonData = urlParams.get('data');
+            
+            if (!jsonData) {
+                showError('❌ Нет данных. Откройте через бота.');
+                return;
+            }
             
             try {
-                if (!jsonData) {
-                    throw new Error('❌ Данные не получены. Откройте через бота.');
+                const decoded = decodeURIComponent(jsonData);
+                const allData = JSON.parse(decoded);
+                
+                if (!allData.sections || !allData.sections.length) {
+                    showError('📭 Нет доступных разделов.');
+                    return;
                 }
                 
-                // ПРОСТО ДЕКОДИРУЕМ URL-кодирование
-                const decodedData = decodeURIComponent(jsonData);
-                const sectionData = JSON.parse(decodedData);
+                ALL_SECTIONS = allData.sections;
+                console.log(`✅ Загружено разделов: ${ALL_SECTIONS.length}`);
                 
-                console.log('✅ Данные успешно получены');
-                console.log('📁 Раздел:', sectionData.section.name);
-                console.log('📊 Материалов:', sectionData.materials.length);
-                
-                // Сохраняем данные
-                currentMaterials = sectionData.materials || [];
-                
-                // Обновляем интерфейс
-                document.getElementById('sectionName').textContent = sectionData.section.name;
-                
-                if (sectionData.section.cover_image) {
-                    const img = document.getElementById('sectionBgImage');
-                    img.src = sectionData.section.cover_image;
-                }
-                
-                // Расчет страниц
-                const materialsPerPage = ITEMS_PER_PAGE - 1;
-                totalPages = Math.max(1, Math.ceil(currentMaterials.length / materialsPerPage));
-                
-                // Обновляем интерфейс
-                updateGrid();
-                updatePagination();
-                
+                // Инициализируем первый раздел
+                initSection(0);
                 hideLoader();
-                console.log('🎉 Загрузка завершена!');
                 
-            } catch (error) {
-                console.error('❌ Ошибка:', error);
-                
-                // Показываем ошибку
-                document.getElementById('gridContainer').innerHTML = `
-                    <div style="grid-column: 1 / -1; text-align: center; padding: 40px;">
-                        <div style="color: #ff6b6b; margin-bottom: 20px;">❌ Ошибка загрузки</div>
-                        <div style="color: #888; font-size: 14px; margin-bottom: 20px;">
-                            ${error.message}<br><br>
-                            <strong>Что делать:</strong><br>
-                            1. Закройте это окно<br>
-                            2. Нажмите кнопку раздела в боте снова
-                        </div>
-                        <button onclick="tg.close()" style="
-                            background: #3ea6ff;
-                            border: none;
-                            color: #0f0f0f;
-                            padding: 10px 20px;
-                            border-radius: 8px;
-                            font-weight: 600;
-                            cursor: pointer;
-                        ">Закрыть</button>
-                    </div>
-                `;
-                
-                hideLoader();
+            } catch (err) {
+                console.error('Ошибка загрузки:', err);
+                showError('Ошибка формата данных: ' + err.message);
             }
         }
         
-        // Функция для открытия файлов через Telegram
-        function openMaterial(material) {
-            console.log('🎬 Открытие материала:', material.id, material.file_type);
+        // ===== ИНИЦИАЛИЗАЦИЯ РАЗДЕЛА =====
+        function initSection(sectionIndex) {
+            if (sectionIndex < 0 || sectionIndex >= ALL_SECTIONS.length) return;
             
-            if (!material.file_id) {
-                tg.showAlert('❌ Файл недоступен');
-                return;
+            CURRENT_SECTION_INDEX = sectionIndex;
+            const section = ALL_SECTIONS[CURRENT_SECTION_INDEX];
+            
+            // 1. Обновляем заголовок
+            document.getElementById('sectionName').textContent = section.name;
+            
+            // 2. Обновляем фоновое изображение раздела
+            const bgImg = document.getElementById('sectionBgImage');
+            if (section.cover) {
+                bgImg.src = section.cover;
+            } else {
+                bgImg.src = '';
             }
             
-            const fileType = material.file_type || 'document';
+            // 3. Рассчитываем пагинацию для материалов ЭТОГО раздела
+            const itemsPerPage = ITEMS_PER_PAGE - 1; // -1 для блока статистики
+            totalPages = Math.max(1, Math.ceil(section.materials.length / itemsPerPage));
+            currentPage = 1;
             
-            // Используем встроенные методы Telegram WebApp API для открытия файлов
-            switch(fileType) {
-                case 'video':
-                    if (typeof tg.openVideo === 'function') {
-                        tg.openVideo(material.file_id);
-                    } else {
-                        // Fallback для старых версий
-                        tg.openLink(`tg://openvideo?file_id=${material.file_id}`);
-                    }
-                    break;
-                    
-                case 'photo':
-                    if (typeof tg.openPhoto === 'function') {
-                        tg.openPhoto(material.file_id);
-                    } else {
-                        tg.openLink(`tg://openphoto?file_id=${material.file_id}`);
-                    }
-                    break;
-                    
-                case 'document':
-                case 'audio':
-                default:
-                    // tg.openDocument работает для документов, аудио и других файлов[citation:7]
-                    if (typeof tg.openDocument === 'function') {
-                        tg.openDocument(material.file_id);
-                    } else {
-                        tg.openLink(`tg://opendocument?file_id=${material.file_id}`);
-                    }
-            }
+            // 4. Рисуем сетку и пагинацию
+            updateGrid();
+            updatePagination();
+            updateSectionNavigation();
         }
         
-        // Обновление сетки
+        // ===== ОТОБРАЖЕНИЕ СЕТКИ (ПЛИТОК) =====
         function updateGrid() {
-            const gridContainer = document.getElementById('gridContainer');
+            const grid = document.getElementById('gridContainer');
+            const section = ALL_SECTIONS[CURRENT_SECTION_INDEX];
+            const materials = section.materials || [];
             
-            if (!currentMaterials.length) {
-                gridContainer.innerHTML = `
-                    <div style="grid-column: 1 / -1; text-align: center; padding: 40px;">
-                        <div style="color: #aaa;">📭 В этом разделе пока нет материалов</div>
-                    </div>
-                `;
+            if (!materials.length) {
+                grid.innerHTML = `<div class="error-message">📭 В этом разделе пока нет материалов</div>`;
                 return;
             }
             
-            // Расчет элементов для текущей страницы
+            // Расчет видимых материалов для текущей страницы
             const itemsPerPage = ITEMS_PER_PAGE - 1;
-            const startIndex = (currentPage - 1) * itemsPerPage;
-            const endIndex = Math.min(startIndex + itemsPerPage, currentMaterials.length);
-            const pageMaterials = currentMaterials.slice(startIndex, endIndex);
+            const startIdx = (currentPage - 1) * itemsPerPage;
+            const endIdx = Math.min(startIdx + itemsPerPage, materials.length);
+            const pageMaterials = materials.slice(startIdx, endIdx);
             
-            let gridHTML = '';
+            let html = '';
             
-            // Специальный элемент для статистики
-            gridHTML += `
-                <div class="grid-item special-item" onclick="tg.showAlert('📚 В разделе: ${currentMaterials.length} материалов')">
+            // 1. Блок статистики (всегда первый)
+            html += `
+                <div class="grid-item special-item" onclick="tg.showAlert('Раздел: ${section.name}\\nМатериалов: ${materials.length}')">
                     <div class="special-link">
                         📊 Статистика<br>
-                        <small>Материалов: ${currentMaterials.length}</small>
+                        <small>${materials.length} шт.</small>
                     </div>
                 </div>
             `;
             
-            // Элементы материалов
-            pageMaterials.forEach((material, index) => {
-                const globalIndex = startIndex + index + 1;
-                const bgColor = getMaterialColor(material.file_type);
+            // 2. Материалы текущей страницы
+            pageMaterials.forEach((mat, localIndex) => {
+                const globalIndex = startIdx + localIndex + 1;
+                const color = getMaterialColor(mat.typ);
+                const icon = getFileTypeIcon(mat.typ);
                 
-                // Внутри цикла forEach в функции updateGrid():
-                gridHTML += `
-                    <div class="grid-item" onclick="openMaterial(${JSON.stringify(material).replace(/"/g, '&quot;')})">
+                html += `
+                    <div class="grid-item" onclick="openMaterial(${JSON.stringify(mat).replace(/"/g, '&quot;')})">
                         <div class="video-number">${globalIndex}</div>
-                        <div class="video-thumbnail" style="background: ${bgColor};">
-                            <!-- Иконка типа файла в центре -->
-                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 24px; color: rgba(255,255,255,0.9);">
-                                ${getFileTypeIcon(material.file_type)}
-                            </div>
+                        
+                        <!-- БЛОК ПРЕВЬЮ: ЕСЛИ ЕСТЬ thumb_id - ПОКАЗЫВАЕМ КАРТИНКУ -->
+                        <div class="video-thumbnail" style="background: ${color};">
+                            ${mat.thb ? 
+                                `<img src="https://api.telegram.org/file/bot7672802314:AAF00aFiUc88iiqZoMKDHKQTE6wfNBIbgL4/${mat.thb}" 
+                                    style="width:100%; height:100%; object-fit:cover;">` :
+                                `<div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); 
+                                        font-size:24px; color:rgba(255,255,255,0.9);">${icon}</div>`
+                            }
                         </div>
-                        <div style="
-                            position: absolute;
-                            bottom: 0;
-                            left: 0;
-                            right: 0;
-                            background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
-                            color: white;
-                            padding: 8px 6px;
-                            font-size: 11px;
-                            text-overflow: ellipsis;
-                            overflow: hidden;
-                            white-space: nowrap;
-                            text-align: center;
-                        ">
-                            <strong>${getFileTypeIcon(material.file_type)}</strong> ${material.description || `Материал #${material.id}`}
+                        
+                        <!-- Подпись внизу -->
+                        <div class="material-caption">
+                            ${icon} ${mat.typ.toUpperCase()}
                         </div>
                     </div>
                 `;
             });
             
-            gridContainer.innerHTML = gridHTML;
+            grid.innerHTML = html;
         }
         
-        // Обновление пагинации
-        function updatePagination() {
-            const pageNumbers = document.getElementById('pageNumbers');
-            const prevBtn = document.getElementById('prevBtn');
-            const nextBtn = document.getElementById('nextBtn');
+        // ===== НАВИГАЦИЯ МЕЖДУ РАЗДЕЛАМИ (сверху) =====
+        function updateSectionNavigation() {
+            const btn = document.getElementById('sectionBtn');
+            const section = ALL_SECTIONS[CURRENT_SECTION_INDEX];
             
-            prevBtn.disabled = currentPage === 1;
-            nextBtn.disabled = currentPage === totalPages;
-            
-            let paginationHTML = '';
-            const maxPagesToShow = 5;
-            let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
-            let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
-            
-            if (endPage - startPage + 1 < maxPagesToShow) {
-                startPage = Math.max(1, endPage - maxPagesToShow + 1);
+            // Обновляем текст кнопки с навигацией
+            btn.querySelector('.btn-content').innerHTML = `
+                <span class="btn-arrow" onclick="changeSection(-1); event.stopPropagation();">←</span>
+                <span id="sectionName">${section.name}</span>
+                <span class="btn-arrow" onclick="changeSection(1); event.stopPropagation();">→</span>
+            `;
+        }
+        
+        function changeSection(delta) {
+            const newIndex = CURRENT_SECTION_INDEX + delta;
+            if (newIndex >= 0 && newIndex < ALL_SECTIONS.length) {
+                initSection(newIndex);
             }
+        }
+        
+        // ===== ПАГИНАЦИЯ (вертикальные полоски внизу) =====
+        function updatePagination() {
+            const container = document.getElementById('pageNumbers');
+            let html = '';
             
-            for (let i = startPage; i <= endPage; i++) {
+            for (let i = 1; i <= totalPages; i++) {
                 const isActive = i === currentPage;
-                paginationHTML += `
-                    <button class="page-rect ${isActive ? 'active' : ''}" onclick="goToPage(${i})">
+                html += `
+                    <button class="page-rect ${isActive ? 'active' : ''}" 
+                            onclick="goToPage(${i})"
+                            title="Страница ${i}">
                         ${i}
                         <div class="page-tooltip">Страница ${i}</div>
                     </button>
                 `;
             }
             
-            pageNumbers.innerHTML = paginationHTML;
-        }
-        
-        // Вспомогательные функции
-        function getMaterialColor(fileType) {
-            const colors = {
-                'video': 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)',
-                'photo': 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                'document': 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-                'audio': 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
-            };
-            return colors[fileType] || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-        }
-        
-        function getFileTypeIcon(fileType) {
-            const icons = {
-                'video': '🎬',
-                'photo': '🖼️',
-                'document': '📄',
-                'audio': '🎵'
-            };
-            return icons[fileType] || '📁';
+            container.innerHTML = html;
+            
+            // Кнопки вперед/назад
+            document.getElementById('prevBtn').disabled = currentPage === 1;
+            document.getElementById('nextBtn').disabled = currentPage === totalPages;
         }
         
         function goToPage(page) {
@@ -328,44 +258,103 @@
             currentPage = page;
             updateGrid();
             updatePagination();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            window.scrollTo(0, 0);
+        }
+        
+        // ===== ОТКРЫТИЕ ФАЙЛА В TELEGRAM =====
+        function openMaterial(material) {
+            if (!material.fid) {
+                tg.showAlert('❌ Файл недоступен');
+                return;
+            }
+            
+            // Используем НАТИВНЫЕ методы Telegram Web App
+            switch(material.typ) {
+                case 'video':
+                    if (typeof tg.openVideo === 'function') {
+                        tg.openVideo(material.fid);
+                    } else {
+                        tg.openLink(`tg://openvideo?file_id=${material.fid}`);
+                    }
+                    break;
+                    
+                case 'photo':
+                    if (typeof tg.openPhoto === 'function') {
+                        tg.openPhoto(material.fid);
+                    } else {
+                        tg.openLink(`tg://openphoto?file_id=${material.fid}`);
+                    }
+                    break;
+                    
+                default: // document, audio и другие
+                    if (typeof tg.openDocument === 'function') {
+                        tg.openDocument(material.fid);
+                    } else {
+                        tg.openLink(`tg://opendocument?file_id=${material.fid}`);
+                    }
+            }
+        }
+        
+        // ===== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====
+        function getMaterialColor(type) {
+            const map = {
+                'video': 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)',
+                'photo': 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                'document': 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                'audio': 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
+            };
+            return map[type] || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+        }
+        
+        function getFileTypeIcon(type) {
+            const map = {
+                'video': '🎬',
+                'photo': '🖼️',
+                'document': '📄',
+                'audio': '🎵'
+            };
+            return map[type] || '📁';
         }
         
         function showLoader() {
-            const loader = document.querySelector('.loader');
-            if (loader) loader.style.display = 'block';
+            document.querySelector('.loader').style.display = 'block';
         }
         
         function hideLoader() {
-            const loader = document.querySelector('.loader');
-            if (loader) loader.style.display = 'none';
+            document.querySelector('.loader').style.display = 'none';
         }
         
-        // Обработчики событий
-        document.getElementById('prevBtn').addEventListener('click', () => goToPage(currentPage - 1));
-        document.getElementById('nextBtn').addEventListener('click', () => goToPage(currentPage + 1));
+        function showError(msg) {
+            document.getElementById('gridContainer').innerHTML = `
+                <div class="error-message">
+                    <div class="error-icon">⚠️</div>
+                    <div>${msg}</div>
+                </div>
+            `;
+            hideLoader();
+        }
         
-        document.getElementById('sectionBtn').addEventListener('click', () => {
-            tg.close();
-        });
-        
-        // Инициализация
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('📄 DOM загружен');
-            
-            // Настройка Telegram
+        // ===== ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ =====
+        document.addEventListener('DOMContentLoaded', function() {
+            // Настройка внешнего вида Telegram
             tg.ready();
-            tg.setHeaderColor('#0f0f0f');
             tg.setBackgroundColor('#0f0f0f');
             
-            // Кнопка "Назад"
-            tg.BackButton.show();
-            tg.BackButton.onClick(() => {
+            // Скрываем стандартную кнопку "Назад", делаем свою
+            tg.BackButton.hide();
+            
+            // Вешаем обработчики на кнопки пагинации
+            document.getElementById('prevBtn').onclick = () => goToPage(currentPage - 1);
+            document.getElementById('nextBtn').onclick = () => goToPage(currentPage + 1);
+            
+            // Кнопка "Домой" закрывает приложение
+            document.getElementById('sectionBtn').onclick = (e) => {
+                if (e.target.closest('.btn-arrow')) return; // Не закрывать при клике на стрелки
                 tg.close();
-            });
+            };
             
             // Загружаем данные
-            loadSectionData();
+            loadAllData();
         });
     </script>
 </body>
