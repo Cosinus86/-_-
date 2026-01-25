@@ -317,11 +317,13 @@
         }
         
         function showLoader() {
-            document.querySelector('.loader').style.display = 'block';
+            const loader = document.querySelector('.loader');
+            if (loader && loader.style) loader.style.display = 'block';
         }
-        
+
         function hideLoader() {
-            document.querySelector('.loader').style.display = 'none';
+            const loader = document.querySelector('.loader');
+            if (loader && loader.style) loader.style.display = 'none';
         }
         
         function showError(msg) {
