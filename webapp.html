@@ -441,12 +441,14 @@
                 ALL_SECTIONS = allData.sections;
                 console.log('✅ Загружено разделов:', ALL_SECTIONS.length);
                 
+                // НОВОЕ: Используем только file_id, без прямых ссылок
                 ALL_SECTIONS = ALL_SECTIONS.map(section => {
                     return {
                         ...section,
                         materials: section.materials.map(mat => ({
                             ...mat,
-                            previewUrl: mat.thb ? generatePreviewUrl(mat.thb) : null
+                            // Используем thumb_id только если он есть
+                            previewUrl: mat.thb ? getThumbnailUrl(mat.thb) : null
                         }))
                     };
                 });
@@ -460,8 +462,12 @@
             }
         }
 
-        function generatePreviewUrl(fileId) {
-            return `https://api.telegram.org/file/bot7672802314:AAF00aFiUc88iiqZoMKDHKQTE6wfNBIbgL4/${fileId}`;
+        // НОВАЯ ФУНКЦИЯ: Получение превью только для маленьких файлов
+        function getThumbnailUrl(thumbId) {
+            // Только для превью (они обычно маленькие)
+            // Используем прямое обращение к API Telegram
+            // Внимание: это работает только для файлов меньше 20МБ!
+            return `https://api.telegram.org/file/bot7672802314:AAF00aFiUc88iiqZoMKDHKQTE6wfNBIbgL4/${thumbId}`;
         }
 
         function initSection(sectionIndex) {
@@ -533,7 +539,8 @@
                                 `<img src="${mat.previewUrl}" 
                                       alt="Превью" 
                                       loading="lazy"
-                                      onerror="handleImageError(this, '${mat.typ}')">` :
+                                      onerror="handleImageError(this, '${mat.typ}')"
+                                      referrerpolicy="no-referrer">` :
                                 `<div style="width:100%;height:100%;background:${getMaterialColor(mat.typ)};display:flex;align-items:center;justify-content:center;">
                                     <span style="font-size:24px;opacity:0.8;">${typeIcon}</span>
                                 </div>`
@@ -567,6 +574,9 @@
                 display: flex;
                 align-items: center;
                 justify-content: center;
+                position: absolute;
+                top: 0;
+                left: 0;
             `;
             
             const iconSpan = document.createElement('span');
@@ -574,14 +584,10 @@
             iconSpan.textContent = typeIcon;
             
             fallbackDiv.appendChild(iconSpan);
-            
-            if (container.querySelector('.play-icon')) {
-                container.insertBefore(fallbackDiv, container.querySelector('.play-icon'));
-            } else {
-                container.appendChild(fallbackDiv);
-            }
+            container.appendChild(fallbackDiv);
         }
 
+        // ГЛАВНОЕ ИСПРАВЛЕНИЕ: Правильное открытие файлов через Telegram Web App
         async function openTelegramMaterial(material) {
             console.log('Открываем материал:', material);
             
@@ -590,153 +596,81 @@
                 return;
             }
             
-            const fileId = encodeURIComponent(material.fid);
+            // Ключевое изменение: используем только file_id без прямых ссылок
+            // Telegram Web App сам обрабатывает file_id
             
-            if (material.typ === 'video') {
-                try {
-                    if (typeof tg.openVideo === 'function') {
-                        tg.openVideo(material.fid);
-                        console.log('Использован tg.openVideo');
-                    } else {
-                        tg.openLink(`tg://openvideo?file_id=${fileId}`);
-                        console.log('Использован tg://openvideo');
-                    }
-                } catch (e) {
-                    console.error('Ошибка открытия видео:', e);
-                    tryAlternativeMethods(material);
+            try {
+                // Метод 1: Пытаемся использовать нативные методы TWA
+                if (material.typ === 'video' && typeof tg.openVideo === 'function') {
+                    console.log('Используем tg.openVideo');
+                    tg.openVideo(material.fid);
+                    return;
                 }
-            } 
-            else if (material.typ === 'photo') {
-                try {
-                    if (typeof tg.openPhoto === 'function') {
-                        tg.openPhoto(material.fid);
-                        console.log('Использован tg.openPhoto');
-                    } else {
-                        tg.openLink(`tg://openphoto?file_id=${fileId}`);
-                        console.log('Использован tg://openphoto');
-                    }
-                } catch (e) {
-                    console.error('Ошибка открытия фото:', e);
-                    showImageInPopup(material);
+                if (material.typ === 'photo' && typeof tg.openPhoto === 'function') {
+                    console.log('Используем tg.openPhoto');
+                    tg.openPhoto(material.fid);
+                    return;
                 }
-            }
-            else if (material.typ === 'audio') {
-                try {
-                    if (typeof tg.openAudio === 'function') {
-                        tg.openAudio(material.fid);
-                        console.log('Использован tg.openAudio');
-                    } else {
-                        tg.openLink(`tg://openaudio?file_id=${fileId}`);
-                        console.log('Использован tg://openaudio');
-                    }
-                } catch (e) {
-                    console.error('Ошибка открытия аудио:', e);
-                    tg.showAlert('Не удалось открыть аудио файл');
+                if (material.typ === 'audio' && typeof tg.openAudio === 'function') {
+                    console.log('Используем tg.openAudio');
+                    tg.openAudio(material.fid);
+                    return;
                 }
-            }
-            else {
-                try {
-                    if (typeof tg.openDocument === 'function') {
-                        tg.openDocument(material.fid);
-                        console.log('Использован tg.openDocument');
-                    } else {
-                        tg.openLink(`tg://opendocument?file_id=${fileId}`);
-                        console.log('Использован tg://opendocument');
-                    }
-                } catch (e) {
-                    console.error('Ошибка открытия документа:', e);
-                    
-                    const alternativeMethods = [
-                        `tg://openfile?file_id=${fileId}`,
-                        `tg://openmedia?file_id=${fileId}`,
-                        `tg://share?url=file_id_${fileId}`
-                    ];
-                    
-                    for (const method of alternativeMethods) {
-                        try {
-                            tg.openLink(method);
-                            console.log('Использована альтернативная схема:', method);
-                            break;
-                        } catch (err) {
-                            continue;
-                        }
-                    }
+                if (typeof tg.openDocument === 'function') {
+                    console.log('Используем tg.openDocument');
+                    tg.openDocument(material.fid);
+                    return;
                 }
+                
+                // Метод 2: Используем tg.openLink с правильной схемой
+                const fileId = encodeURIComponent(material.fid);
+                let scheme = '';
+                
+                switch(material.typ) {
+                    case 'video':
+                        scheme = 'openvideo';
+                        break;
+                    case 'photo':
+                        scheme = 'openphoto';
+                        break;
+                    case 'audio':
+                        scheme = 'openaudio';
+                        break;
+                    default:
+                        scheme = 'opendocument';
+                }
+                
+                const url = `tg://${scheme}?file_id=${fileId}`;
+                console.log('Открываем через схему:', url);
+                
+                if (typeof tg.openLink === 'function') {
+                    tg.openLink(url);
+                } else {
+                    // Метод 3: Открываем в новом окне (fallback)
+                    window.open(url, '_blank');
+                }
+                
+            } catch (error) {
+                console.error('Ошибка при открытии файла:', error);
+                
+                // Метод 4: Показываем сообщение с file_id для ручного открытия
+                tg.showAlert(`Не удалось открыть файл автоматически. File ID: ${material.fid.substring(0, 20)}...`);
             }
         }
 
-        function tryAlternativeMethods(material) {
-            const fileId = encodeURIComponent(material.fid);
-            const methods = [
-                `tg://openfile?file_id=${fileId}`,
-                `tg://openmedia?file_id=${fileId}`,
-                `tg://share?url=file_id_${fileId}`,
-                `tg://msg?text=open_file_${fileId}`
-            ];
-            
-            let opened = false;
-            
-            for (const method of methods) {
-                try {
-                    tg.openLink(method);
-                    console.log('Успешно открыто через:', method);
-                    opened = true;
-                    break;
-                } catch (e) {
-                    console.log('Не удалось открыть через:', method, e);
-                }
-            }
-            
-            if (!opened) {
-                tg.showAlert('Не удалось открыть файл. Проверьте версию Telegram.');
-            }
-        }
-
-        function showImageInPopup(material) {
-            const popup = document.createElement('div');
-            popup.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0,0,0,0.95);
-                z-index: 1000;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-            `;
-            
-            const img = document.createElement('img');
-            img.src = generatePreviewUrl(material.fid);
-            img.style.cssText = `
-                max-width: 90%;
-                max-height: 90%;
-                object-fit: contain;
-            `;
-            
-            img.onerror = () => {
-                const errorDiv = document.createElement('div');
-                errorDiv.style.cssText = `
-                    color: white;
-                    text-align: center;
-                    padding: 20px;
-                `;
-                errorDiv.innerHTML = `
-                    <div style="font-size: 48px; margin-bottom: 16px;">🖼️</div>
-                    <div>Не удалось загрузить изображение</div>
-                `;
-                popup.innerHTML = '';
-                popup.appendChild(errorDiv);
-            };
-            
-            popup.appendChild(img);
-            popup.onclick = () => {
-                if (document.body.contains(popup)) {
-                    document.body.removeChild(popup);
-                }
-            };
-            document.body.appendChild(popup);
+        // НОВАЯ ФУНКЦИЯ: Тестирование методов Telegram Web App
+        function testTelegramMethods() {
+            console.log('=== Доступные методы Telegram Web App ===');
+            console.log('Версия:', tg.version);
+            console.log('Платформа:', tg.platform);
+            console.log('openVideo:', typeof tg.openVideo);
+            console.log('openPhoto:', typeof tg.openPhoto);
+            console.log('openAudio:', typeof tg.openAudio);
+            console.log('openDocument:', typeof tg.openDocument);
+            console.log('openLink:', typeof tg.openLink);
+            console.log('showAlert:', typeof tg.showAlert);
+            console.log('showPopup:', typeof tg.showPopup);
+            console.log('========================================');
         }
 
         function updateSectionNavigation() {
@@ -887,23 +821,9 @@
             hideLoader();
         }
 
-        function debugTelegramAPI() {
-            console.log('=== Telegram WebApp Debug ===');
-            console.log('Версия Telegram:', tg.version);
-            console.log('Платформа:', tg.platform);
-            console.log('Доступные методы:');
-            console.log('- openVideo:', typeof tg.openVideo);
-            console.log('- openPhoto:', typeof tg.openPhoto);
-            console.log('- openAudio:', typeof tg.openAudio);
-            console.log('- openDocument:', typeof tg.openDocument);
-            console.log('- openLink:', typeof tg.openLink);
-            console.log('- showPopup:', typeof tg.showPopup);
-            console.log('- showAlert:', typeof tg.showAlert);
-            console.log('=============================');
-        }
-
         document.addEventListener('DOMContentLoaded', function() {
-            debugTelegramAPI();
+            // Тестируем доступные методы
+            testTelegramMethods();
             
             tg.BackButton.hide();
             
